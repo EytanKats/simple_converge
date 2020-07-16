@@ -83,3 +83,39 @@ def precision(predictions, ground_truth):
     precision_score = (numerator + EPSILON) / (denominator + EPSILON)
 
     return precision_score
+
+
+def contrast_ratio(target, background):
+
+    mean_target = np.mean(target)
+    mean_background = np.mean(background)
+
+    ratio = 20 * np.log10(mean_target / mean_background)
+
+    return ratio
+
+
+def contrast_to_noise_ratio(target, background):
+
+    mean_target = np.mean(target)
+    std_target = np.std(target)
+
+    mean_background = np.mean(background)
+    std_background = np.std(background)
+
+    numerator = mean_target - mean_background
+    denominator = np.sqrt(np.power(std_target, 2) + np.power(std_background, 2))
+
+    ratio = numerator / denominator
+
+    return ratio
+
+
+def signal_to_noise_ratio(data):
+
+    mean_background = np.mean(data)
+    std_background = np.std(data)
+
+    ratio = mean_background / std_background
+
+    return ratio
