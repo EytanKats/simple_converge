@@ -87,6 +87,13 @@ def precision(predictions, ground_truth):
 
 def contrast_ratio(target, background):
 
+    """
+    This method calculates contrast ration between target and background image regions
+    :param target: target image region
+    :param background: background image region
+    :return: contrast ration
+    """
+
     mean_target = np.mean(target)
     mean_background = np.mean(background)
 
@@ -96,6 +103,13 @@ def contrast_ratio(target, background):
 
 
 def contrast_to_noise_ratio(target, background):
+
+    """
+    This method calculates contrast-to-noise ratio using target and background image regions
+    :param target: target image region
+    :param background: background image region
+    :return: contrast-to-noise ration
+    """
 
     mean_target = np.mean(target)
     std_target = np.std(target)
@@ -112,6 +126,12 @@ def contrast_to_noise_ratio(target, background):
 
 
 def signal_to_noise_ratio(data):
+
+    """
+    This method calculates signal-to-noise ratio
+    :param data: image region based on which signal-to-noise ratio is calculated
+    :return: signal-to-noise ration
+    """
 
     mean_background = np.mean(data)
     std_background = np.std(data)
