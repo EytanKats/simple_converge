@@ -37,6 +37,22 @@ def normalized_confusion_matrix(confusion_matrix):
     return _normalized_confusion_matrix
 
 
+def iou(predictions, ground_truth):
+
+    """
+    This method calculates iou (jaccard) metric between predictions and ground truth
+    :param predictions: model predictions
+    :param ground_truth: ground truth
+    :return: iou score
+    """
+
+    numerator = np.sum(predictions * ground_truth)
+    denominator = np.sum(predictions) + np.sum(ground_truth) - numerator
+    iou_score = (numerator + EPSILON) / (denominator + EPSILON)
+
+    return iou_score
+
+
 def dice(predictions, ground_truth):
 
     """
