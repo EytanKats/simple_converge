@@ -5,7 +5,7 @@ import numpy as np
 class Image(object):
 
     """
-    This class defines common methods to manipulate color images.
+    This class defines common methods to manipulate single channel or 3-channel images.
     """
 
     def __init__(self):
@@ -58,7 +58,7 @@ class Image(object):
 
         self.pixel_data = cv2.flip(self.pixel_data, flipCode=0)
 
-    def rotate(self, angle):
+    def rotate(self, angle, interpolation=cv2.INTER_LINEAR):
 
         """
         This method rotates the image by defined angle
@@ -72,4 +72,23 @@ class Image(object):
 
         self.pixel_data = cv2.warpAffine(self.pixel_data,
                                          rot_mat,
-                                         (self.pixel_data.shape[1], self.pixel_data.shape[0]))
+                                         (self.pixel_data.shape[1], self.pixel_data.shape[0]),
+                                         flags=interpolation)
+
+    def crop(self, top, left, height, width):
+
+        """
+        This method crops the image according to parameters
+        :param top: top coordinate of the cropped image
+        :param left: left coordinate of the cropped image
+        :param height: height of the cropped image
+        :param width: width of the cropped image
+        :return: None
+        """
+
+        cur_shape = self.pixel_data.shape
+        if top + height > cur_shape[0] or left + width > cur_shape[1]:
+            print("Requested crop exceeds the boundaries of the current image")
+            return
+
+        self.pixel_data = self.pixel_data[top:top + height, left: left + width, ...]
