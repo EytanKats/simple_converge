@@ -9,6 +9,21 @@ class BinaryMask(Image):
     This class defines methods specific for single channel binary masks
     """
 
+    def get_bounding_box(self):
+
+        """
+        This method calculates bounding box for the binary mask
+        :return: bounding box coordinates (x1, x2, y1, y2) when x is a row and y is a column
+                 if mask doesn't contain any non zero pixels (0, shape[0], 0, shape[1]) will be returned
+        """
+
+        h, w = self.pixel_data.shape[:2]
+        mask0, mask1 = self.pixel_data.any(0), self.pixel_data.any(1)
+        col_start, col_end = mask0.argmax(), w - mask0[::-1].argmax()
+        row_start, row_end = mask1.argmax(), h - mask1[::-1].argmax()
+
+        return row_start, row_end, col_start, col_end
+
     def remove_holes(self):
 
         """
