@@ -38,7 +38,7 @@ class Image(object):
         :return: None
         """
 
-        self.pixel_data = cv2.resize(self.pixel_data, shape, interpolation)
+        self.pixel_data = cv2.resize(self.pixel_data, shape, interpolation=interpolation)
 
     def flip_lr(self):
 
