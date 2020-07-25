@@ -321,7 +321,7 @@ class Generator(BaseObject):
 
         for idx, (_, info_row) in enumerate(data_info.iterrows()):
 
-            data, label = self.dataset.get_pair(info_row, preprocess=preprocess, augment=augment, get_data=True, get_label=get_label)
+            data, label = self.dataset.get_pair(info_row, preprocess=preprocess, augment=augment, get_data=True, get_label=get_label, run_mode=run_mode)
 
             # Dataset 'get_pair' method can return several samples in the form of list (and not one as in usual case)
             # For example, it can happens when we crop patches from the single image during inference

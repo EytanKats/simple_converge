@@ -4,6 +4,7 @@ import numpy as np
 
 from base.BaseObject import BaseObject
 from utils import dataset_utils
+from utils.RunMode import RunMode
 
 
 class BaseDataset(BaseObject):
@@ -121,10 +122,10 @@ class BaseDataset(BaseObject):
         pass
 
     @abc.abstractmethod
-    def _apply_preprocessing(self, data, label):
+    def _apply_preprocessing(self, data, label, run_mode=RunMode.TRAINING):
         pass
 
-    def get_pair(self, info_row, preprocess, augment, get_data=True, get_label=True):
+    def get_pair(self, info_row, preprocess, augment, get_data=True, get_label=True, run_mode=RunMode.TRAINING):
 
         data = None
         label = None
@@ -139,7 +140,7 @@ class BaseDataset(BaseObject):
             data, label = self._apply_augmentations(data, label)
 
         if preprocess:
-            data, label = self._apply_preprocessing(data, label)
+            data, label = self._apply_preprocessing(data, label, run_mode=run_mode)
 
         return data, label
 
