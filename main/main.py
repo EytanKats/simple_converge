@@ -142,7 +142,7 @@ def train(settings,
 
         # Apply postprocessing
         postprocessed_test_predictions = dataset.apply_postprocessing(test_predictions, test_data, original_test_data,
-                                                                      generator.test_info[fold], fold)
+                                                                      generator.test_info[fold], fold, run_mode=RunMode.TRAINING)
 
         # Calculate metrics
         dataset.calculate_fold_metrics(postprocessed_test_predictions, test_data, original_test_data,
@@ -214,7 +214,7 @@ def test(settings,
 
         # Apply postprocessing
         postprocessed_test_predictions = dataset.apply_postprocessing(test_predictions, test_data, original_test_data,
-                                                                      generator.test_info[fold], fold)
+                                                                      generator.test_info[fold], fold, run_mode=RunMode.TEST)
 
         # Calculate metrics
         dataset.calculate_fold_metrics(postprocessed_test_predictions, test_data, original_test_data,
@@ -278,6 +278,6 @@ def inference(settings,
         inference_data = generator.get_pair(run_mode=RunMode.INFERENCE, preprocess=True, augment=False, get_label=False, get_data=True, fold=batch_idx)
         original_inference_data = generator.get_pair(run_mode=RunMode.INFERENCE, preprocess=False, augment=False, get_label=False, get_data=True, fold=batch_idx)
 
-        batch_predictions = dataset.apply_postprocessing(batch_predictions, inference_data, original_inference_data, inference_info, batch_idx)
+        batch_predictions = dataset.apply_postprocessing(batch_predictions, inference_data, original_inference_data, inference_info, batch_idx, run_mode=RunMode.INFERENCE)
         dataset.save_inferenced_data(batch_predictions, inference_data, original_inference_data, inference_info, batch_idx, settings.simulation_folder)
 

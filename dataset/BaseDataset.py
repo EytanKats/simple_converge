@@ -155,7 +155,8 @@ class BaseDataset(BaseObject):
                              test_data,
                              original_test_data,
                              fold_test_info,
-                             fold_num):
+                             fold_num,
+                             run_mode=RunMode.TRAINING):
         pass
 
     @abc.abstractmethod
