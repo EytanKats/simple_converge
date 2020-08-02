@@ -327,10 +327,10 @@ class Generator(BaseObject):
             # For example, it can happens when we crop patches from the single image during inference
             if isinstance(data, list):
                 inputs = inputs + data
-                labels = labels + labels
             else:
                 inputs.append(data)
-                labels.append(label)
+
+            labels.append(label)
 
         # If preprocess is True then we can assume that all inputs and labels are of the same shape and can be copied to numpy array
         if preprocess:
