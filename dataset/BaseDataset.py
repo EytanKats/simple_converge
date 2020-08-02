@@ -122,7 +122,7 @@ class BaseDataset(BaseObject):
         pass
 
     @abc.abstractmethod
-    def _apply_preprocessing(self, data, label, run_mode=RunMode.TRAINING):
+    def _apply_preprocessing(self, data, label, info_row, run_mode=RunMode.TRAINING):
         pass
 
     def get_pair(self, info_row, preprocess, augment, get_data=True, get_label=True, run_mode=RunMode.TRAINING):
@@ -140,7 +140,7 @@ class BaseDataset(BaseObject):
             data, label = self._apply_augmentations(data, label)
 
         if preprocess:
-            data, label = self._apply_preprocessing(data, label, run_mode=run_mode)
+            data, label = self._apply_preprocessing(data, label, info_row, run_mode=run_mode)
 
         return data, label
 
