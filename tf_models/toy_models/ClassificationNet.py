@@ -3,7 +3,7 @@ from tf_models.BaseModel import BaseModel
 from tf_models.backbones_collection import backbones_collection
 
 
-class ToyClassificationNet(BaseModel):
+class ClassificationNet(BaseModel):
 
     """
     This class defines simple classification to play with it
@@ -16,7 +16,7 @@ class ToyClassificationNet(BaseModel):
         :return: None
         """
 
-        super(ToyClassificationNet, self).__init__()
+        super(ClassificationNet, self).__init__()
 
         self.input_shape = (28, 28)
 
@@ -28,7 +28,7 @@ class ToyClassificationNet(BaseModel):
         :return: None
         """
 
-        super(ToyClassificationNet, self).parse_args(**kwargs)
+        super(ClassificationNet, self).parse_args(**kwargs)
 
         params = kwargs["params"]
 
