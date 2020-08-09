@@ -12,7 +12,7 @@ from utils.Array import Array as ArrayUtils
 from dataset.BaseClassesDataset import BaseClassesDataset
 
 
-class Dataset(BaseClassesDataset):
+class MnistDataset(BaseClassesDataset):
 
     def __init__(self):
 
@@ -21,8 +21,9 @@ class Dataset(BaseClassesDataset):
         :return: None
         """
 
-        super(Dataset, self).__init__()
+        super(MnistDataset, self).__init__()
 
+        # Fields to be filled by parsing
         self.true_predictions_folder = "true_predictions"
         self.false_predictions_folder = "false_predictions"
         self.save_true_predictions = False
@@ -47,11 +48,11 @@ class Dataset(BaseClassesDataset):
         :return: None
         """
 
-        super(Dataset, self).parse_args(**kwargs)
+        super(MnistDataset, self).parse_args(**kwargs)
 
     def initialize_dataset(self):
 
-        super(Dataset, self).initialize_dataset()
+        super(MnistDataset, self).initialize_dataset()
 
         # Initialize shape of the fields that to be filled during execution
         self.all_raw_test_predictions = np.array([]).reshape(0, len(self.class_labels))  # raw predictions for all folds
