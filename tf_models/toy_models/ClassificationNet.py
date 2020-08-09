@@ -18,7 +18,8 @@ class ClassificationNet(BaseModel):
 
         super(ClassificationNet, self).__init__()
 
-        self.input_shape = (28, 28)
+        # Fields to be filled by parsing
+        self.input_shape = (28, 28, 1)
 
     def parse_args(self, **kwargs):
 
@@ -46,6 +47,6 @@ class ClassificationNet(BaseModel):
         x = tf.keras.layers.Flatten()(inputs)
         x = tf.keras.layers.Dense(units=512, activation="relu")(x)
         x = tf.keras.layers.Dropout(rate=0.2)(x)
-        outputs = tf.keras.layers.Dense(units=10, activation='softmax')
+        outputs = tf.keras.layers.Dense(units=10, activation='softmax')(x)
 
         self.model = tf.keras.Model(inputs=inputs, outputs=outputs)
