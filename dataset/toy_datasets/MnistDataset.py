@@ -81,6 +81,8 @@ class MnistDataset(BaseClassesDataset):
 
     def _apply_preprocessing(self, data, label, info_row, run_mode=RunMode.TRAINING):
 
+        data = data / 255.0
+
         return data, label
 
     def apply_postprocessing(self, test_predictions, test_data, original_test_data,
