@@ -17,7 +17,7 @@ class TensorBoardCallback(BaseCallback):
 
         super(TensorBoardCallback, self).__init__()
 
-        self.log_dir = None
+        self.log_dir = ""
         self.histogram_freq = 0
         self.write_graph = False
         self.write_images = False
