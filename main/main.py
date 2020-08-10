@@ -109,6 +109,9 @@ def train(settings,
             if callback_args["callback_name"] == "csv_logger_callback":
                 callback_args["training_log_path"] = os.path.join(fold_simulation_folder, settings.training_log_name)
 
+            if callback_args["callback_name"] == "tensorboard":
+                callback_args["log_dir"] = os.path.join(fold_simulation_folder, settings.tensorboard_log_dir)
+
         # Save training, validation and test data
         generator.save_split_data(fold_simulation_folder, fold)
 
