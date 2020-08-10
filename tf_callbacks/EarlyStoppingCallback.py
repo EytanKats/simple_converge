@@ -43,7 +43,7 @@ class EarlyStoppingCallback(BaseCallback):
         :return: callback
         """
 
-        optimizer = tf.keras.callbacks.EarlyStopping(monitor=self.monitor,
+        callback = tf.keras.callbacks.EarlyStopping(monitor=self.monitor,
                                                      patience=self.patience)
 
-        return optimizer
+        return callback

@@ -51,9 +51,9 @@ class ReduceLrOnPlateauCallback(BaseCallback):
         :return: callback
         """
 
-        optimizer = tf.keras.callbacks.ReduceLROnPlateau(monitor=self.monitor,
+        callback = tf.keras.callbacks.ReduceLROnPlateau(monitor=self.monitor,
                                                          factor=self.reduce_factor,
                                                          patience=self.patience,
                                                          min_lr=self.min_lr)
 
-        return optimizer
+        return callback

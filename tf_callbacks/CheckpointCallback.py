@@ -47,8 +47,8 @@ class CheckpointCallback(BaseCallback):
         :return: callback
         """
 
-        optimizer = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_weights_path,
+        callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_weights_path,
                                                        save_best_only=self.save_best_only,
                                                        monitor=self.monitor)
 
-        return optimizer
+        return callback

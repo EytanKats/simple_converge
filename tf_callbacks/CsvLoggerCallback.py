@@ -39,6 +39,6 @@ class CsvLoggerCallback(BaseCallback):
         :return: callback
         """
 
-        optimizer = tf.keras.callbacks.CSVLogger(filename=self.training_log_path)
+        callback = tf.keras.callbacks.CSVLogger(filename=self.training_log_path)
 
-        return optimizer
+        return callback
