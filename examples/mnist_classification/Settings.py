@@ -89,7 +89,7 @@ class Settings(object):
         # Base model arguments
         self.model_args["model_name"] = "toy_classification_net"
         self.model_args["load_weights_path"] = ""  # will be set by training script
-        self.model_args["epochs"] = 3000
+        self.model_args["epochs"] = 5
         self.model_args["steps_per_epoch"] = 0  # training script set this parameter according to samples number
         self.model_args["val_steps"] = 0  # training script set this parameter according to samples number
         self.model_args["prediction_batch_size"] = 64
@@ -97,7 +97,7 @@ class Settings(object):
         # Toy classification model arguments
         self.model_args["input_shape"] = (28, 28, 1)
 
-        # Losses arguments
+        # Regularizer arguments
         self.model_args["regularizer_args"] = dict()
         self.model_args["regularizer_args"]["regularizer_name"] = "l1_l2_regularizer"
         self.model_args["regularizer_args"]["l1_reg_factor"] = 1e-2
@@ -148,6 +148,18 @@ class Settings(object):
         self.model_args["callbacks_args"][3]["min_lr"] = 1e-4
         self.model_args["callbacks_args"][3]["monitor"] = "val_loss"
 
+        # TensorBoard callback arguments
+        self.model_args["callbacks_args"].append(dict())
+        self.model_args["callbacks_args"][4]["callback_name"] = "tensorboard"
+        self.model_args["callbacks_args"][4]["log_dir"] = ""  # will be set by training script
+        self.model_args["callbacks_args"][4]["histogram_freq"] = 1
+        self.model_args["callbacks_args"][4]["write_graph"] = False
+        self.model_args["callbacks_args"][4]["write_images"] = False
+        self.model_args["callbacks_args"][4]["update_freq"] = "epoch"
+        self.model_args["callbacks_args"][4]["profile_batch"] = 2
+        self.model_args["callbacks_args"][4]["embeddings_freq"] = 0
+        self.model_args["callbacks_args"][4]["embeddings_metadata"] = None
+
         # Logger arguments ##############################################
         self.logger_args = dict()
 
@@ -159,6 +171,7 @@ class Settings(object):
         self.save_tested_data = True
         self.weights_name = "weights.h5"
         self.training_log_name = "metrics.log"
+        self.tensorboard_log_dir = "tensorboard_logs"
         self.settings_file_name = "Settings.py"
         self.model_architecture_file_name = "architecture.json"
         self.saved_model_folder_name = "model"
