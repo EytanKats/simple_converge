@@ -119,6 +119,13 @@ class Settings(object):
         # Metrics arguments
         self.model_args["metrics_args"] = list()
 
+        # Metrics for first output
+        self.model_args["metrics_args"].append(list())
+
+        self.model_args["metrics_args"][0].append(dict())
+        self.model_args["metrics_args"][0][0]["metric_name"] = "accuracy_metric"
+        self.model_args["metrics_args"][0][0]["categorical_accuracy"] = True
+
         # Callback arguments
         self.model_args["callbacks_args"] = list()
 
@@ -167,7 +174,7 @@ class Settings(object):
         self.logger_args["file_name"] = "results.log"
 
         # Output settings
-        self.simulation_folder = "../../../../Simulations/MNIST/test"
+        self.simulation_folder = "../../../../Simulations/MNIST/test_categorical_accuracy"
         self.save_tested_data = True
         self.weights_name = "weights.h5"
         self.training_log_name = "metrics.log"
