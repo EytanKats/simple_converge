@@ -87,3 +87,35 @@ class BinaryMask(Image):
                 postprocessed_mask[cc_with_stats[1] == idx] = postprocessed_mask[cc_with_stats[1] == idx] - 1
 
         self.pixel_data = postprocessed_mask
+
+    def get_largest_internal_rectangle(self):
+
+        """
+        This method calculates area and coordinates of largest rectangle that can be drawn inside the binary mask
+        :param mask: single-channel binary mask
+        :return: tuple (area , [x1, y1, x2, y2]) while x corresponds to row and y corresponds to column
+        """
+
+        largest_rectangle = (0, [])
+        w = np.zeros(dtype=int, shape=self.pixel_data.shape)
+        h = np.zeros(dtype=int, shape=self.pixel_data.shape)
+        for r in range(self.pixel_data.shape[0]):
+            for c in range(self.pixel_data.shape[1]):
+                if self.pixel_data[r][c] == 0:
+                    continue
+                if r == 0:
+                    h[r][c] = 1
+                else:
+                    h[r][c] = h[r - 1][c] + 1
+                if c == 0:
+                    w[r][c] = 1
+                else:
+                    w[r][c] = w[r][c - 1] + 1
+                min_w = w[r][c]
+                for dh in range(h[r][c]):
+                    min_w = min(min_w, w[r - dh][c])
+                    area = (dh + 1) * min_w
+                    if area > largest_rectangle[0]:
+                        largest_rectangle = (area, [r - dh, c - min_w + 1, r, c])
+
+        return largest_rectangle
