@@ -1,6 +1,8 @@
 import os
 import glob
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 
 def load_dataset_file(dataset_file_path):
@@ -121,3 +123,70 @@ def create_dataset(data_template, mask_template, classification=False, save_data
         data_info.to_csv(output_dataset_file_path, index=False)
 
     return data_info
+
+
+def analyze_dataset(dataset, save_plots=False, output_plots_dir=""):
+
+    """
+    This method performs analysis of the dataset while assuming that dataset contains 'group' and optionally 'class'
+    columns.
+    :param dataset: pandas dataframe that describes dataset
+    :param save_plots: if True the plots of dataset analysis will be saved
+                       if False the plots of dataset analysis will be shown
+    :param output_plots_dir: directory to save plots
+    :return: None
+    """
+
+    groups = dataset["group"].value_counts()
+    output_path = os.path.join(output_plots_dir, "groups.png")
+    _bar_plot(groups, save_plots, output_path)
+
+    # If dataset doesn't contain the class column - return
+    if "class" not in dataset.columns:
+        return
+
+    classes = dataset["class"].value_counts()
+    output_path = os.path.join(output_plots_dir, "classes.png")
+    _bar_plot(classes, save_plots, output_path)
+
+    group_values = groups.index.values.tolist()
+    for group_value in group_values:
+
+        group_value_df = dataset[dataset["group"] == group_value]
+        classes_for_group = group_value_df["class"].value_counts()
+        output_path = os.path.join(output_plots_dir, "group_" + str(group_value) + ".png")
+        _bar_plot(classes_for_group, save_plots, output_path)
+
+    class_values = classes.index.values.tolist()
+    for class_value in class_values:
+        class_value_df = dataset[dataset["class"] == class_value]
+        groups_for_class = class_value_df["group"].value_counts()
+        output_path = os.path.join(output_plots_dir, "class_" + str(class_value) + ".png")
+        _bar_plot(groups_for_class, save_plots, output_path)
+
+
+def _bar_plot(groups, save_plot=False, output_plot_path=""):
+
+    """
+    This method build bar plot from the pandas series.
+    :param groups: pandas series
+                   index of the series contains x-axis names, values of the series defines height of the bars
+    :param save_plots: if True the plots of dataset analysis will be saved
+                       if False the plots of dataset analysis will be shown
+    :param output_plots_dir: directory to save plots
+    :return: None
+    """
+
+    x = groups.index.values.tolist()
+    y = groups.values.tolist()
+
+    plt.figure()
+    groups_plot = sns.barplot(x=x, y=y)
+    for idx, count in enumerate(y):
+        groups_plot.text(idx, count, count, color="black", ha="center")
+
+    plt.xticks(range(0, len(x)), x, rotation="vertical")
+    if save_plot:
+        plt.savefig(output_plot_path)
+    plt.show()
+    plt.close()
