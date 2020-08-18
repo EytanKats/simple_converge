@@ -101,16 +101,20 @@ class BinaryMask(Image):
         h = np.zeros(dtype=int, shape=self.pixel_data.shape)
         for r in range(self.pixel_data.shape[0]):
             for c in range(self.pixel_data.shape[1]):
+
                 if self.pixel_data[r][c] == 0:
                     continue
+
                 if r == 0:
                     h[r][c] = 1
                 else:
                     h[r][c] = h[r - 1][c] + 1
+
                 if c == 0:
                     w[r][c] = 1
                 else:
                     w[r][c] = w[r][c - 1] + 1
+
                 min_w = w[r][c]
                 for dh in range(h[r][c]):
                     min_w = min(min_w, w[r - dh][c])
