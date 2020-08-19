@@ -171,9 +171,9 @@ def _bar_plot(groups, save_plot=False, output_plot_path=""):
     This method build bar plot from the pandas series.
     :param groups: pandas series
                    index of the series contains x-axis names, values of the series defines height of the bars
-    :param save_plots: if True the plots of dataset analysis will be saved
-                       if False the plots of dataset analysis will be shown
-    :param output_plots_dir: directory to save plots
+    :param save_plot: if True the plot will be saved
+                       if False the plot will be shown
+    :param output_plot_path: path to save plot
     :return: None
     """
 
@@ -186,7 +186,10 @@ def _bar_plot(groups, save_plot=False, output_plot_path=""):
         groups_plot.text(idx, count, count, color="black", ha="center")
 
     plt.xticks(range(0, len(x)), x, rotation="vertical")
+    plt.tight_layout()  # this prevents clipping of bar names
     if save_plot:
         plt.savefig(output_plot_path)
-    plt.show()
+    else:
+        plt.show()
+
     plt.close()
