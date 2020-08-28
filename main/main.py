@@ -10,6 +10,7 @@ import pandas as pd
 from plots import plots
 from logger.Logger import Logger
 from utils.RunMode import RunMode
+from utils.dataset_utils import load_dataset_file
 
 
 def _initialize_logger(settings):
@@ -181,7 +182,7 @@ def test(settings,
     if settings.test_simulation:  # Split data to training/validation/test and folds just as before training (not sufficiently robust because depends on specific hardware random)
         generator.split_data()
     else:  # Set prepared data info that contains pairs of samples and annotations
-        generator.test_info = [pd.read_json(test_file) for test_file in settings.test_data_info]
+        generator.test_info = [load_dataset_file(test_file) for test_file in settings.test_data_info]
 
     # Test model for each fold
     for fold in settings.training_folds:
