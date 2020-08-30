@@ -68,7 +68,7 @@ class BaseDataset(BaseObject):
         if "inference_batch_size" in self.params.keys():
             self.inference_batch_size = self.params["inference_batch_size"]
 
-    def initialize_dataset(self):
+    def initialize_dataset(self, run_mode=RunMode.TRAINING):
 
         self.original_info = dataset_utils.load_dataset_file(self.data_definition_file)
 

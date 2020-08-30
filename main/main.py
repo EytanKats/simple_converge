@@ -29,11 +29,11 @@ def _initialize_logger(settings):
     return settings, logger
 
 
-def _initialize_dataset(settings, dataset):
+def _initialize_dataset(settings, dataset, run_mode):
 
     # Initialize dataset
     dataset.parse_args(params=settings.dataset_args)
-    dataset.initialize_dataset()
+    dataset.initialize_dataset(run_mode)
 
     # Set generator arguments with dataset
     settings.generator_args["dataset"] = dataset
@@ -79,7 +79,7 @@ def train(settings,
 
     # Initialize logger, dataset and generator
     settings, logger = _initialize_logger(settings)
-    settings, dataset = _initialize_dataset(settings, dataset)
+    settings, dataset = _initialize_dataset(settings, dataset, run_mode=RunMode.TRAINING)
     settings, generator = _initialize_generator(settings, generator)
 
     # Split data to training/validation/test and folds
@@ -176,13 +176,16 @@ def test(settings,
 
     # Initialize logger, dataset and generator
     settings, logger = _initialize_logger(settings)
-    settings, dataset = _initialize_dataset(settings, dataset)
+    settings, dataset = _initialize_dataset(settings, dataset, run_mode=RunMode.TEST)
     settings, generator = _initialize_generator(settings, generator)
 
-    if settings.test_simulation:  # Split data to training/validation/test and folds just as before training (not sufficiently robust because depends on specific hardware random)
-        generator.split_data()
-    else:  # Set prepared data info that contains pairs of samples and annotations
-        generator.test_info = [load_dataset_file(test_file) for test_file in settings.test_data_info]
+    if settings.test_simulation:  # Set test data that were generated during inference
+        test_files = [os.path.join(settings.simulation_folder, str(fold), generator.test_data_file_name) for fold in settings.training_folds]
+        generator.test_info = [load_dataset_file(test_file) for test_file in test_files]
+
+    else:  # Set filtered data info
+        generator.test_info = [dataset.filtered_info]
+        settings.training_folds = [0]
 
     # Test model for each fold
     for fold in settings.training_folds:
@@ -253,14 +256,14 @@ def inference(settings,
         inference_info = pd.DataFrame()
         inference_info[settings.dataset_args["data_path_column"]] = paths
 
-        inference_info_path = os.path.join(settings.simulation_folder, "inference_info.json")
-        inference_info.to_json(inference_info_path)
+        inference_info_path = os.path.join(settings.simulation_folder, "inference_info.csv")
+        inference_info.to_csv(inference_info_path, index=False)
 
         settings.dataset_args["data_definition_file"] = inference_info_path
 
     # Initialize logger, dataset and generator
     settings, logger = _initialize_logger(settings)
-    settings, dataset = _initialize_dataset(settings, dataset)
+    settings, dataset = _initialize_dataset(settings, dataset, run_mode=RunMode.INFERENCE)
     settings, generator = _initialize_generator(settings, generator)
 
     # Split inference data to batches

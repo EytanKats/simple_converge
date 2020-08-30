@@ -185,7 +185,6 @@ class Settings(object):
 
         # Test settings
         self.test_simulation = True
-        self.test_data_info = [""]
 
         # Inference settings
         self.inference_data_pattern = ""

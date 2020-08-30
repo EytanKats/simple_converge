@@ -50,7 +50,7 @@ class MnistDataset(BaseClassesDataset):
 
         super(MnistDataset, self).parse_args(**kwargs)
 
-    def initialize_dataset(self):
+    def initialize_dataset(self, run_mode=RunMode.TRAINING):
 
         super(MnistDataset, self).initialize_dataset()
 

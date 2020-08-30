@@ -1,3 +1,6 @@
+import pandas as pd
+
+from utils.RunMode import RunMode
 from utils import dataset_utils
 from dataset.BaseDataset import BaseDataset
 
@@ -49,8 +52,9 @@ class BaseClassesDataset(BaseDataset):
         if "class_names" in self.params.keys():
             self.class_names = self.params["class_names"]
 
-    def initialize_dataset(self):
-        super(BaseClassesDataset, self).initialize_dataset()
+    def initialize_dataset(self, run_mode=RunMode.TRAINING):
+
+        super(BaseClassesDataset, self).initialize_dataset(run_mode)
 
         if self.apply_class_filters:  # during inference there is no need to apply class filters
 
@@ -66,4 +70,8 @@ class BaseClassesDataset(BaseDataset):
                 self.logger.log("{0} samples of '{1}' class".format(class_filtered_info.shape[0], self.class_names[cls_idx]))
 
             self.logger.log("\n")
-            self.filtered_info = classes_filtered_info
+
+            if run_mode == RunMode.TRAINING:
+                self.filtered_info = classes_filtered_info  # filtered dataset consists of list of datasets (one for each class)
+            elif run_mode == RunMode.TEST:
+                self.filtered_info = pd.concat(classes_filtered_info, ignore_index=True)
