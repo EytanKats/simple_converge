@@ -1,6 +1,8 @@
 import tensorflow as tf
+
 from utils.constants import EPSILON
 from tf_metrics.BaseMetric import BaseMetric
+from tf_metrics.core.WeightedCategoricalCrossentropy import WeightedCategoricalCrossentropy
 
 
 class CrossEntropyMetric(BaseMetric):
@@ -11,6 +13,7 @@ class CrossEntropyMetric(BaseMetric):
      - categorical cross entropy
      - binary focal cross entropy
      - categorical focal cross entropy
+     - weighted categorical cross entropy
     """
 
     def __init__(self):
@@ -28,8 +31,12 @@ class CrossEntropyMetric(BaseMetric):
         self.categorical_focal = False
         self.binary_focal = False
 
+        self.weighted_categorical_cross_entropy = False
+
         self.focal_gamma = 2
         self.focal_alpha = 0.25
+
+        self.cost_matrix = None
 
     def parse_args(self, **kwargs):
 
@@ -59,6 +66,9 @@ class CrossEntropyMetric(BaseMetric):
         if "focal_gamma" in self.params.keys():
             self.focal_gamma = self.params["focal_gamma"]
 
+        if "cost_matrix" in self.params.keys():
+            self.cost_matrix = self.params["cost_matrix"]
+
     def get_metric(self):
 
         if self.categorical_cross_entropy:
@@ -72,6 +82,9 @@ class CrossEntropyMetric(BaseMetric):
 
         elif self.binary_focal:
             return self.binary_focal_metric
+
+        elif self.weighted_categorical_cross_entropy:
+            return self.weighted_categorical_cross_entropy_metric()
 
         else:
             raise ValueError("The metric is not found")
@@ -138,3 +151,14 @@ class CrossEntropyMetric(BaseMetric):
         mean_metric = tf.reduce_mean(metric)
 
         return mean_metric
+
+    def weighted_categorical_cross_entropy_metric(self):
+
+        """
+        This method returns class that implements weighted categorical crossentropy loss.
+        Different types of misclassification weighted differently according to cost matrix.
+        :return: instance of WeightedCategoricalCrossentropy class
+        """
+
+        loss_class_instance = WeightedCategoricalCrossentropy(cost_mat=self.cost_matrix)
+        return loss_class_instance
