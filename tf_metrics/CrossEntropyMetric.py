@@ -60,6 +60,9 @@ class CrossEntropyMetric(BaseMetric):
         if "binary_focal" in self.params.keys():
             self.binary_focal = self.params["binary_focal"]
 
+        if "weighted_categorical_cross_entropy" in self.params.keys():
+            self.weighted_categorical_cross_entropy = self.params["weighted_categorical_cross_entropy"]
+
         if "focal_alpha" in self.params.keys():
             self.focal_alpha = self.params["focal_alpha"]
 

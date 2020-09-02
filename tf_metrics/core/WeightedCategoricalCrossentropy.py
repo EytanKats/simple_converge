@@ -2,6 +2,7 @@
 Source: https://stackoverflow.com/questions/56696069/keras-apply-different-weight-to-different-misclassification
 """
 
+import numpy as np
 import tensorflow.keras.backend as K
 from tensorflow.keras.losses import CategoricalCrossentropy
 
@@ -9,6 +10,9 @@ from tensorflow.keras.losses import CategoricalCrossentropy
 class WeightedCategoricalCrossentropy(CategoricalCrossentropy):
 
     def __init__(self, cost_mat, name='weighted_categorical_crossentropy', **kwargs):
+
+        cost_mat = np.array(cost_mat)
+
         assert(cost_mat.ndim == 2)
         assert(cost_mat.shape[0] == cost_mat.shape[1])
 
