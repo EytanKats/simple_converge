@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from utils.RunMode import RunMode
@@ -75,3 +76,6 @@ class BaseClassesDataset(BaseDataset):
                 self.filtered_info = classes_filtered_info  # filtered dataset consists of list of datasets (one for each class)
             elif run_mode == RunMode.TEST:
                 self.filtered_info = pd.concat(classes_filtered_info, ignore_index=True)
+
+                # Workaround: pd.concat changes int to float if one of the data frames is empty
+                self.filtered_info[self.label_column] = self.filtered_info[self.label_column].astype(np.int32)
