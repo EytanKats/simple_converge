@@ -52,7 +52,7 @@ class MnistDataset(BaseClassesDataset):
 
     def initialize_dataset(self, run_mode=RunMode.TRAINING):
 
-        super(MnistDataset, self).initialize_dataset()
+        super(MnistDataset, self).initialize_dataset(run_mode=run_mode)
 
         # Initialize shape of the fields that to be filled during execution
         self.all_raw_test_predictions = np.array([]).reshape(0, len(self.class_labels))  # raw predictions for all folds
