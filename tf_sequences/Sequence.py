@@ -25,6 +25,7 @@ class Sequence(tf.keras.utils.Sequence, BaseObject):
         self.data_info = None
 
         self.batch_size = 4
+        self.steps_per_epoch = None
         self.apply_augmentations = False
 
         self.multi_input = False
@@ -50,6 +51,9 @@ class Sequence(tf.keras.utils.Sequence, BaseObject):
 
         if "batch_size" in self.params.keys():
             self.batch_size = self.params["batch_size"]
+
+        if "steps_per_epoch" in self.params.keys():
+            self.steps_per_epoch = self.params["steps_per_epoch"]
 
         if "apply_augmentations" in self.params.keys():
             self.apply_augmentations = self.params["apply_augmentations"]
@@ -83,7 +87,11 @@ class Sequence(tf.keras.utils.Sequence, BaseObject):
         :return: number of batches
         """
 
-        return int(math.ceil(self.data_info.shape[0]) / self.batch_size)
+        if self.steps_per_epoch is not None:
+            return self.steps_per_epoch
+
+        else:
+            return int(math.ceil(self.data_info.shape[0]) / self.batch_size)
 
     def __getitem__(self, idx):
 
