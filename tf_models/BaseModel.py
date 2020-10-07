@@ -128,20 +128,6 @@ class BaseModel(BaseObject):
     def save_weights(self):
         self.model.save_weights(self.save_weights_path)
 
-    def save_tf_model(self):
-        signature = tf.saved_model.signature_def_utils.predict_signature_def(inputs={self.inputs_signature:
-                                                                                     self.model.input},
-                                                                             outputs={self.outputs_signature:
-                                                                                      self.model.output})
-
-        builder = tf.saved_model.builder.SavedModelBuilder(self.saved_model_folder)
-        builder.add_meta_graph_and_variables(sess=tf.keras.backend.get_session(),
-                                             tags=[tf.saved_model.tag_constants.SERVING],
-                                             signature_def_map={
-                                                 tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:
-                                                 signature})
-        builder.save()
-
     def save_model(self):
         self.model.save(self.saved_model_folder_path)
 
