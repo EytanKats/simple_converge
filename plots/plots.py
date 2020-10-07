@@ -137,11 +137,14 @@ def image_plot(image,
                title="",
                colors_map="gray",
                show=False,
-               output_path=""):
+               output_path="",
+               fig_size=(10, 5.5)):
 
-    plt.figure()
+    plt.figure(figsize=fig_size)
     plt.imshow(image, cmap=colors_map)
     plt.title(title)
+
+    plt.tight_layout()
 
     if show:
         plt.show()
