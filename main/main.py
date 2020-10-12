@@ -191,6 +191,7 @@ def test(settings,
     for fold in settings.training_folds:
 
         logger.log("Test model for fold: {0}".format(fold))
+        logger.log("Number of samples to test: {0}".format(generator.test_info[fold].shape[0]))
 
         # Update simulation directory for current fold
         fold_simulation_folder = os.path.join(settings.simulation_folder, str(fold))
