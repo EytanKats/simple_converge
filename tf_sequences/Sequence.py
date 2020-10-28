@@ -126,6 +126,10 @@ class Sequence(tf.keras.utils.Sequence, BaseObject):
         else:
             labels = np.array(labels)
 
+        # Permute the data on the end of the epoch
+        if idx + 1 == len(self):
+            self.data_info = self.data_info.reindex(np.random.permutation(self.data_info.index))
+
         return inputs, labels
 
     def __iter__(self):
