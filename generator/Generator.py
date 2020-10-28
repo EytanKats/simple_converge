@@ -30,6 +30,8 @@ class Generator(BaseObject):
         self.data_random_seed = 2018
 
         self.folds_num = 1
+        self.train_steps_per_epoch = None
+        self.val_steps_per_epoch = None
 
         self.data_info_folder = ""
         self.train_data_file_name = "train_data.json"
@@ -77,6 +79,12 @@ class Generator(BaseObject):
 
         if "folds_num" in self.params.keys():
             self.folds_num = self.params["folds_num"]
+
+        if "train_steps_per_epoch" in self.params.keys():
+            self.train_steps_per_epoch = self.params["train_steps_per_epoch"]
+
+        if "val_steps_per_epoch" in self.params.keys():
+            self.val_steps_per_epoch = self.params["val_steps_per_epoch"]
 
         if "data_info_folder" in self.params.keys():
             self.data_info_folder = self.params["data_info_folder"]
@@ -294,8 +302,10 @@ class Generator(BaseObject):
         self.sequence_args["dataset"] = self.dataset
         if run_mode == RunMode.TRAINING:
             self.sequence_args["data_info"] = self.train_info[fold]
+            self.sequence_args["steps_per_epoch"] = self.train_steps_per_epoch
         else:
             self.sequence_args["data_info"] = self.val_info[fold]
+            self.sequence_args["steps_per_epoch"] = self.val_steps_per_epoch
 
         sequence = Sequence()
         sequence.parse_args(params=self.sequence_args)
