@@ -57,11 +57,6 @@ class Logger(BaseObject):
         self.file_handler.setFormatter(logging.Formatter(self.message_format))
         self.logger.addHandler(self.file_handler)
 
-        # Set format for parent logger (console)
-        if self.logger.parent:
-            for handler in self.logger.parent.handlers:
-                handler.setFormatter(logging.Formatter(self.message_format))
-
     def end(self):
         self.logger.removeHandler(self.file_handler)
         self.file_handler = None
@@ -71,9 +66,7 @@ class Logger(BaseObject):
             print("File handler is not defined, call start method")
 
         if console:
-            self.logger.propagate = True
-        else:
-            self.logger.propagate = False
+            print(message)
 
         if level == LogLevels.DEBUG:
             self.logger.debug(message)
