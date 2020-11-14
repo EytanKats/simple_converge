@@ -5,19 +5,21 @@ class Conv2DBnRelu(tf.keras.layers.Layer):
 
     """
     This class implements building block of CNN that consist of:
-    - 2D convolutional layer
+    - 2D convolutional layer with 'same' padding
     - batch normalization layer
     - ReLU activation
     """
 
     def __init__(self,
                  filter_num,
-                 kernel_size):
+                 kernel_size,
+                 strides=(1, 1)):
 
         super(Conv2DBnRelu, self).__init__()
 
         self.conv = tf.keras.layers.Conv2D(filters=filter_num,
                                            kernel_size=kernel_size,
+                                           strides=strides,
                                            padding="same")
 
         self.bn = tf.keras.layers.BatchNormalization()
