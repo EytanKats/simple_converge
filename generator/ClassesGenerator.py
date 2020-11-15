@@ -71,7 +71,8 @@ class ClassesGenerator(Generator.Generator):
 
             data_info = self.dataset.filtered_info
             for cls_idx, cls_info in enumerate(data_info):
-                self._fill_info(cls_info, cls_idx)
+                permuted_cls_info = cls_info.reindex(np.random.permutation(cls_info.index))
+                self._fill_info(permuted_cls_info, cls_idx)
 
             # If set_test_data_info is True _fill_info method will duplicate test_info classes number times
             # To prevent duplication we will replace test info by settings it one another time
