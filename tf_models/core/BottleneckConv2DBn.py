@@ -1,6 +1,7 @@
 import tensorflow as tf
 from tf_models.core.Conv2DBn import Conv2DBn
 
+
 class BottleneckConv2DBn(tf.keras.layers.Layer):
 
     """
