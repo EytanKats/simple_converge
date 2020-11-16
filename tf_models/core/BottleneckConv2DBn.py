@@ -22,12 +22,12 @@ class BottleneckConv2DBn(tf.keras.layers.Layer):
                                kernel_size=(1, 1),
                                output_activation=True)
 
-        self.conv_2 = Conv2DBn(filter_num=filter_num[0],
+        self.conv_2 = Conv2DBn(filter_num=filter_num[1],
                                kernel_size=kernel_size,
                                strides=strides,
                                output_activation=True)
 
-        self.conv_3 = Conv2DBn(filter_num=filter_num[0],
+        self.conv_3 = Conv2DBn(filter_num=filter_num[2],
                                kernel_size=(1, 1),
                                output_activation=output_activation)
 
