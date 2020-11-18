@@ -36,8 +36,8 @@ class BottleneckConv2DBn(tf.keras.layers.Layer):
              inputs,
              training=False):
 
-        x = self.conv_1(inputs)
-        x = self.conv_2(x)
-        output = self.conv_3(x)
+        x = self.conv_1(inputs, training=training)
+        x = self.conv_2(x, training=training)
+        output = self.conv_3(x, training=training)
 
         return output
