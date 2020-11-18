@@ -5,8 +5,10 @@ from tf_models.core.Conv2DBn import Conv2DBn
 class ResidualBlock(tf.keras.layers.Layer):
 
     """
-    This class implements residual block which consist of 2 conv2d-bn-relu blocks and shortcut connection.
-    Residual block supports both identity and projection shortcut.
+    This class implements residual block which consist of 2 Conv2DBn blocks and shortcut connection.
+    Strides are applied in first Conv2DBn block, second Conv2DBn block always have strides (1, 1).
+    If strides different from (1, 1) than shortcut connection includes Conv2DBn block with kernel size (1, 1)
+    and specified strides (projection shortcut), else shortcut connection is identity.
     """
 
     def __init__(self,
