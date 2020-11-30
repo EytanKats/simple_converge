@@ -1,5 +1,6 @@
 import os
 import glob
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -193,3 +194,23 @@ def _bar_plot(groups, save_plot=False, output_plot_path=""):
         plt.show()
 
     plt.close()
+
+
+def rle_to_mask(rle_encoding, shape):
+
+    """
+    This method converts RLE encoding to binary mask
+    :param rle_encoding: string RLE encoding
+    :param shape: shape of the mask
+    :return: binary mask
+    """
+
+    segments =  rle_encoding.split()
+    flatten_mask = np.zeros(shape[0] * shape[1], dtype=np.uint8)
+    for idx in range(len(segments) // 2):
+        start = int(segments[2 * idx]) - 1
+        length = int(segments[2* idx +1 ])
+        flatten_mask[start:start+length] = 1
+
+    mask = flatten_mask.reshape(shape)
+    return mask
