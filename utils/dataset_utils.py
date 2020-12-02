@@ -215,6 +215,7 @@ def rle_to_mask(rle_encoding, shape):
     mask = flatten_mask.reshape((shape[1], shape[0]))
     return mask.T
 
+
 def mask_to_rle(mask):
 
     """
