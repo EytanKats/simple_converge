@@ -1,4 +1,5 @@
 import os
+import cv2
 import itertools
 import numpy as np
 import pandas as pd
@@ -224,3 +225,33 @@ def overlay_plot(image,
     else:
         plt.savefig(outputs_path)
     plt.close()
+
+def contours_plot(image,
+                  masks,
+                  colors,
+                  thickness=1,
+                  show=False,
+                  outputs_path=""):
+
+    """
+    This method draws all external contours of the mask on the image
+    :param image: RGB image
+    :param masks: list of binary masks
+    :param color: list of RGB colors of the contours
+    :param thickness: thickness of the contour
+    :return: None
+    """
+
+    bgr_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    bgr_colors = [(color[2], color[1], color[0]) for color in colors]
+
+    for mask, bgr_color in zip(masks, bgr_colors):
+        contours, _ = cv2.findContours(mask, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_NONE)
+        cv2.drawContours(bgr_image, contours, contourIdx=-1, color=bgr_color, thickness=thickness)
+
+    if show:
+        cv2.imshow("win", bgr_image)
+        cv2.waitKey(0)
+    else:
+        cv2.imwrite(outputs_path, bgr_image)
+    cv2.destroyWindow("win")
