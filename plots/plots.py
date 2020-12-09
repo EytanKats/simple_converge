@@ -252,6 +252,6 @@ def contours_plot(image,
     if show:
         cv2.imshow("win", bgr_image)
         cv2.waitKey(0)
+        cv2.destroyWindow("win")
     else:
         cv2.imwrite(outputs_path, bgr_image)
-    cv2.destroyWindow("win")
