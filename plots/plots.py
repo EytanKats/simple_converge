@@ -3,8 +3,8 @@ import cv2
 import itertools
 import numpy as np
 import pandas as pd
-import skimage as ski
 import matplotlib.pyplot as plt
+from skimage import color as ski_color
 
 from metrics import metrics
 
@@ -199,22 +199,33 @@ def overlay_plot(image,
                  show=False,
                  outputs_path=""):
 
-    color_mask = np.zeros((image.shape[0], image.shape[1], 3))
+    """
+    This method put overlays on grayscale image
+    :param image: grayscale image; values have to be between 0 and 255
+    :param overlays: binary masks; values have to be 0 or 255
+    :param colors: array of color indexes; 0 for red, 1 for green and 2 for blue
+    :param opacity: overlay opacity; value between 0 and 1
+    :param show: if True image with overlays is shown, else image with overlay is saved
+    :param outputs_path: path to save the image
+    :return: None
+    """
+
+    color_mask = np.zeros((image.shape[0], image.shape[1], 3), dtype=np.uint8)
     for overlay_idx, overlay in enumerate(overlays):
         color_mask[:, :, colors[overlay_idx]] = overlay
 
-    color_image = np.zeros((image.shape[0], image.shape[1], 3))
+    color_image = np.zeros((image.shape[0], image.shape[1], 3), dtype=np.uint8)
     color_image[:, :, 0] = image
     color_image[:, :, 1] = image
     color_image[:, :, 2] = image
 
-    color_img_hsv = ski.color.rgb2hsv(color_image)
-    color_mask_hsv = ski.color.rgb2hsv(color_mask)
+    color_img_hsv = ski_color.rgb2hsv(color_image)
+    color_mask_hsv = ski_color.rgb2hsv(color_mask)
 
     color_img_hsv[..., 0] = color_mask_hsv[..., 0]
     color_img_hsv[..., 1] = color_mask_hsv[..., 1] * opacity
 
-    masked_image = ski.color.hsv2rgb(color_img_hsv)
+    masked_image = ski_color.hsv2rgb(color_img_hsv)
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
