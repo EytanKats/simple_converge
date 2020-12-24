@@ -6,7 +6,7 @@ from tf_models.core.ResNet18 import ResNet18
 class ResNet(BaseModel):
     
     """
-    This class encapsulates ResNet models:
+    This class encapsulates ResNet models of variable depths:
     - ResNet18
     """
 
@@ -21,6 +21,7 @@ class ResNet(BaseModel):
 
         self.resnet_type = "resnet18"
         self.num_classes = 1000
+        self.input_shape = (256, 256, 3)
 
         self.available_models = {"resnet18": ResNet18}
 
@@ -40,10 +41,14 @@ class ResNet(BaseModel):
         if "num_classes" in self.params.keys():
             self.num_classes = self.params["num_classes"]
 
+        if "input_shape" in self.params.keys():
+            self.input_shape = self.params["input_shape"]
+
     def build(self):
 
         """
         This method instantiate ResNet model according to 'resnet_type'
+        and builds it to create weights.
         :return: None
         """
 
@@ -52,3 +57,7 @@ class ResNet(BaseModel):
         else:
             self.logger.log("Unknown type of model: {0}".format(self.resnet_type))
 
+        # Build model to create its weights
+        if self.model is not None:
+            batch_input_shape = (None, *self.input_shape)
+            self.model.build(input_shape=batch_input_shape)
