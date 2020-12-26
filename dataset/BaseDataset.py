@@ -92,28 +92,28 @@ class BaseDataset(BaseObject):
                 self.preloaded_labels[info_row["uuid"]] = self._get_label(info_row)
 
     @abc.abstractmethod
-    def _get_data(self, info_row):
+    def _get_data(self, info_row, run_mode=RunMode.TRAINING):
         pass
 
-    def get_data(self, info_row):
+    def get_data(self, info_row, run_mode=RunMode.TRAINING):
 
         if self.preload_data:
             data = self.preloaded_data[info_row["uuid"]]
         else:
-            data = self._get_data(info_row)
+            data = self._get_data(info_row, run_mode=run_mode)
 
         return data
 
     @abc.abstractmethod
-    def _get_label(self, info_row):
+    def _get_label(self, info_row, run_mode=RunMode.TRAINING):
         pass
 
-    def get_label(self, info_row):
+    def get_label(self, info_row, run_mode=RunMode.TRAINING):
 
         if self.preload_labels:
             label = self.preloaded_labels[info_row["uuid"]]
         else:
-            label = self._get_label(info_row)
+            label = self._get_label(info_row, run_mode=run_mode)
 
         return label
 
@@ -131,10 +131,10 @@ class BaseDataset(BaseObject):
         label = None
 
         if get_data:
-            data = self.get_data(info_row)
+            data = self.get_data(info_row, run_mode=run_mode)
 
         if get_label:
-            label = self.get_label(info_row)
+            label = self.get_label(info_row, run_mode=run_mode)
 
         if augment:
             data, label = self._apply_augmentations(data, label)
