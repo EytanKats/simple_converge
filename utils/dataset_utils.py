@@ -166,6 +166,28 @@ def analyze_dataset(dataset, save_plots=False, output_plots_dir=""):
         _bar_plot(groups_for_class, save_plots, output_path)
 
 
+def analyze_predictions(dataset, save_plots=False, output_dir=""):
+
+    """
+    This method performs analysis of classification model predictions while assuming that dataset contains
+    'group', 'class', and 'predicted_class' columns.
+    :param dataset: pandas dataframe that describes dataset and contains predictions
+    :param save_plots: if True the plots of predictions analysis will be saved
+                       if False the plots of predictions analysis will be shown
+    :param output_dir: directory to save output files
+    :return: None
+    """
+
+    dataset["result"] = ["true" if row["class"] == row["predicted_class"] else "false" for _, row in dataset.iterrows()]
+
+    groups = dataset["group"].unique()
+    for group in groups:
+        group_dataset = dataset[dataset["group"] == group]
+        results_for_group = group_dataset["result"].value_counts()
+        output_path = os.path.join(output_dir, "group_" + str(group) + ".png")
+        _bar_plot(results_for_group, save_plot=save_plots, output_plot_path=output_path)
+
+
 def _bar_plot(groups, save_plot=False, output_plot_path=""):
 
     """
