@@ -1,4 +1,3 @@
-import tensorflow as tf
 from tf_models.BaseModel import BaseModel
 from tf_models.core.ResNet18 import ResNet18
 
@@ -47,7 +46,7 @@ class ResNet(BaseModel):
     def build(self):
 
         """
-        This method instantiate ResNet model according to 'resnet_type'
+        This method instantiates model according to its type
         and builds it to create weights.
         :return: None
         """
