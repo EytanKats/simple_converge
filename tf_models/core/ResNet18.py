@@ -5,8 +5,7 @@ from tf_models.core.ResidualBlock import ResidualBlock
 class ResNet18(tf.keras.Model):
 
     """
-    This class implements ResNet architecture using 4 ResidualBlock blocks
-    and global average pooling
+    This class implements ResNet18 architecture.
     """
 
     def __init__(self, num_classes=1000):
