@@ -10,6 +10,7 @@ from tf_models.third_party_models.EfficientNetB6 import EfficientNetB6 as Effici
 from tf_models.third_party_models.EfficientNetB7 import EfficientNetB7 as EfficientNetB7_EfficientNet
 
 from tf_models.custom_models.ResNet import ResNet as ResNet_Custom
+from tf_models.custom_models.UNet import UNet as UNet_Custom
 
 models_collection = {
 
@@ -24,6 +25,7 @@ models_collection = {
     "efficientnet_b6_efficientnet": EfficientNetB6_EfficientNet,
     "efficientnet_b7_efficientnet": EfficientNetB7_EfficientNet,
 
-    "resnet_custom": ResNet_Custom
+    "resnet_custom": ResNet_Custom,
+    "unet_custom": UNet_Custom
 
 }
