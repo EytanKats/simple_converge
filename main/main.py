@@ -99,13 +99,13 @@ def train(settings,
         if settings.load_model:
             settings.model_args["load_model_path"] = settings.load_model_path[fold]
 
-        settings.model_args["model_architecture_file_path"] = os.path.join(fold_simulation_folder, settings.model_architecture_file_name)
-        settings.model_args["saved_model_folder_path"] = os.path.join(fold_simulation_folder, settings.saved_model_folder_name)
+        settings.model_args["saved_model_path"] = os.path.join(fold_simulation_folder, settings.saved_model_name)
+        settings.model_args["load_weights_path"] = os.path.join(fold_simulation_folder, settings.saved_model_name)
 
         for callback_args in settings.model_args["callbacks_args"]:
 
             if callback_args["callback_name"] == "checkpoint_callback":
-                callback_args["checkpoint_path"] = os.path.join(fold_simulation_folder, settings.saved_model_folder_name)
+                callback_args["checkpoint_path"] = os.path.join(fold_simulation_folder, settings.saved_model_name)
 
             if callback_args["callback_name"] == "csv_logger_callback":
                 callback_args["training_log_path"] = os.path.join(fold_simulation_folder, settings.training_log_name)
@@ -120,6 +120,7 @@ def train(settings,
         if settings.load_model:
             settings.model_args["model_name"] = "base_model"  # change settings to load base model
             model = _initialize_model(settings, models_collection)
+            model.load_model()
 
         else:
             model = _initialize_model(settings, models_collection)
@@ -128,13 +129,17 @@ def train(settings,
         # Train model
         model.fit(fold=fold)
 
+        # Load best weights from checkpoint and save model in 'SavedModel' format
+        model.load_weights()
+        model.save_model()
+
         # Visualize training metrics
         plots.training_plot(training_log_path=os.path.join(fold_simulation_folder, settings.training_log_name),
                             plot_metrics=settings.plot_metrics,
                             output_dir=fold_simulation_folder)
 
         # Change 'load_model_path' of the model to the best model saved during training
-        model.load_model_path = os.path.join(fold_simulation_folder, settings.saved_model_folder_name)
+        model.load_model_path = os.path.join(fold_simulation_folder, settings.saved_model_name)
 
         # Calculate predictions
         test_predictions = model.predict(run_mode=RunMode.TEST, fold=fold)

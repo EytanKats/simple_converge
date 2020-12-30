@@ -29,15 +29,11 @@ class BaseModel(BaseObject):
 
         self.generator = None
 
-        self.load_weights_path = None
-        self.save_weights_path = None
+        self.load_weights_path = ""
+        self.save_weights_path = ""
 
-        self.inputs_signature = None
-        self.outputs_signature = None
-        self.saved_model_folder = None
-
-        self.model_architecture_file_path = ""
-        self.saved_model_folder_path = ""
+        self.load_model_path = ""
+        self.saved_model_path = ""
 
         self.kernel_initializer = "he_normal"
 
@@ -72,20 +68,11 @@ class BaseModel(BaseObject):
         if "save_weights_path" in self.params.keys():
             self.save_weights_path = self.params["save_weights_path"]
 
-        if "inputs_signature" in self.params.keys():
-            self.inputs_signature = self.params["inputs_signature"]
+        if "load_model_path" in self.params.keys():
+            self.load_model_path = self.params["load_model_path"]
 
-        if "outputs_signature" in self.params.keys():
-            self.outputs_signature = self.params["outputs_signature"]
-
-        if "saved_model_folder" in self.params.keys():
-            self.saved_model_folder = self.params["saved_model_folder"]
-
-        if "model_architecture_file_path" in self.params.keys():
-            self.model_architecture_file_path = self.params["model_architecture_file_path"]
-
-        if "saved_model_folder_path" in self.params.keys():
-            self.saved_model_folder_path = self.params["saved_model_folder_path"]
+        if "save_model_path" in self.params.keys():
+            self.save_model_path = self.params["save_model_path"]
 
         if "kernel_initializer" in self.params.keys():
             self.kernel_initializer = self.params["kernel_initializer"]
@@ -127,10 +114,10 @@ class BaseModel(BaseObject):
         self.model.save_weights(self.save_weights_path)
 
     def save_model(self):
-        self.model.save(self.saved_model_folder_path)
+        self.model.save(self.save_model_path)
 
     def load_model(self):
-        self.model = tf.keras.models.load_model(self.saved_model_folder_path)
+        self.model = tf.keras.models.load_model(self.load_model_path)
 
     def _get_regularizer(self):
 
