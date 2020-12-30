@@ -149,9 +149,9 @@ def signal_to_noise_ratio(data):
     :return: signal-to-noise ration
     """
 
-    mean_background = np.mean(data)
-    std_background = np.std(data)
+    mean_target = np.mean(data)
+    std_target = np.std(data)
 
-    ratio = mean_background / std_background
+    ratio = mean_target / std_target
 
     return ratio
