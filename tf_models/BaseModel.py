@@ -1,4 +1,3 @@
-import abc
 import tensorflow as tf
 
 from base.BaseObject import BaseObject
@@ -14,7 +13,7 @@ from tf_optimizers.optimizers_collection import optimizers_collection
 class BaseModel(BaseObject):
 
     """
-    This abstract class defines common methods to all Tensorflow models
+    This class defines common methods to all Tensorflow models
     """
 
     def __init__(self):
@@ -118,7 +117,6 @@ class BaseModel(BaseObject):
         if "prediction_batch_size" in self.params.keys():
             self.prediction_batch_size = self.params["prediction_batch_size"]
 
-    @abc.abstractmethod
     def build(self):
         pass
 
@@ -133,19 +131,6 @@ class BaseModel(BaseObject):
 
     def load_model(self):
         self.model = tf.keras.models.load_model(self.saved_model_folder_path)
-
-    def to_json(self):
-        model_json = self.model.to_json()
-        with open(self.model_architecture_file_path, "w") as json_file:
-            json_file.write(model_json)
-            
-    def from_json(self):
-        json_file = open(self.model_architecture_file_path, "r")
-        json_model = json_file.read()
-        json_file.close()
-        model = tf.keras.models.model_from_json(json_model)
-        
-        return model
 
     def _get_regularizer(self):
 
@@ -262,7 +247,7 @@ class BaseModel(BaseObject):
                                                  get_data=True,
                                                  fold=fold)
 
-        self.load_weights()
+        self.load_model()
         predictions = self.model.predict(inputs, batch_size=self.prediction_batch_size, verbose=1)
 
         return predictions
@@ -276,7 +261,7 @@ class BaseModel(BaseObject):
                                                  get_data=True,
                                                  fold=fold)
 
-        self.load_weights()
+        self.load_model()
         results = self.model.evaluate(inputs, labels, batch_size=self.prediction_batch_size, verbose=1)
 
         return results

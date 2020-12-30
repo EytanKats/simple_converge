@@ -1,3 +1,5 @@
+from tf_models.BaseModel import BaseModel
+
 from tf_models.UNet import UNet
 from tf_models.ResNet50 import ResNet50
 from tf_models.ResNet101 import ResNet101
@@ -11,6 +13,8 @@ from tf_models.EfficientNetB7 import EfficientNetB7
 from tf_models.toy_models.ClassificationNet import ClassificationNet
 
 models_collection = {
+
+    "base_model": BaseModel,
 
     "resnet_50": ResNet50,
     "resnet_101": ResNet101,

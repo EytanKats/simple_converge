@@ -17,8 +17,9 @@ class CheckpointCallback(BaseCallback):
 
         super(CheckpointCallback, self).__init__()
 
-        self.checkpoint_weights_path = None
+        self.checkpoint_path = None
         self.save_best_only = True
+        self.save_weights_only = False
         self.monitor = "val_loss"
 
     def parse_args(self, **kwargs):
@@ -31,11 +32,14 @@ class CheckpointCallback(BaseCallback):
 
         super(CheckpointCallback, self).parse_args(**kwargs)
 
-        if "checkpoint_weights_path" in self.params.keys():
-            self.checkpoint_weights_path = self.params["checkpoint_weights_path"]
+        if "checkpoint_path" in self.params.keys():
+            self.checkpoint_path = self.params["checkpoint_path"]
 
         if "save_best_only" in self.params.keys():
             self.save_best_only = self.params["save_best_only"]
+
+        if "save_weights_only" in self.params.keys():
+            self.save_weights_only = self.params["save_weights_only"]
 
         if "monitor" in self.params.keys():
             self.monitor = self.params["monitor"]
@@ -47,8 +51,9 @@ class CheckpointCallback(BaseCallback):
         :return: callback
         """
 
-        callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_weights_path,
+        callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path,
                                                        save_best_only=self.save_best_only,
+                                                       save_weights_only=self.save_weights_only,
                                                        monitor=self.monitor)
 
         return callback
