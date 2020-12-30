@@ -36,6 +36,7 @@ class Conv2DBnX2(tf.keras.layers.Layer):
 
         return config
 
+    @classmethod
     def from_config(cls, config):
         return cls(**config)
 

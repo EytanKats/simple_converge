@@ -66,6 +66,7 @@ class ResNet18(tf.keras.Model):
         model_configuration = {"num_classes": self.num_classes}
         return model_configuration
 
+    @classmethod
     def from_config(cls, config, custom_objects=None):
         return cls(**config)
 

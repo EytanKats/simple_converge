@@ -95,6 +95,7 @@ class UNet5(tf.keras.Model):
 
         return model_configuration
 
+    @classmethod
     def from_config(cls, config, custom_objects=None):
         return cls(**config)
 

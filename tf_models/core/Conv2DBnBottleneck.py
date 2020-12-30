@@ -47,6 +47,7 @@ class Conv2DBnBottleneck(tf.keras.layers.Layer):
 
         return config
 
+    @classmethod
     def from_config(cls, config):
         return cls(**config)
 
