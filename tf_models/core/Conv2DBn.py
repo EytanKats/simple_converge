@@ -18,6 +18,9 @@ class Conv2DBn(tf.keras.layers.Layer):
 
         super(Conv2DBn, self).__init__()
 
+        self.filter_num = filter_num
+        self.kernel_size = kernel_size
+        self.strides = strides
         self.output_activation = output_activation
 
         self.conv = tf.keras.layers.Conv2D(filters=filter_num,
@@ -26,6 +29,19 @@ class Conv2DBn(tf.keras.layers.Layer):
                                            padding="same")
 
         self.bn = tf.keras.layers.BatchNormalization()
+
+    def get_config(self):
+
+        config = super(Conv2DBn, self).get_config()
+        config.update({"filter_num": self.filter_num,
+                       "kernel_size": self.kernel_size,
+                       "strides": self.strides,
+                       "output_activation": self.output_activation})
+
+        return config
+
+    def from_config(cls, config):
+        return cls(**config)
 
     def call(self,
              inputs,

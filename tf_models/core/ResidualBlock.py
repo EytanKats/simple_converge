@@ -18,6 +18,10 @@ class ResidualBlock(tf.keras.layers.Layer):
 
         super(ResidualBlock, self).__init__()
 
+        self.filter_num = filter_num
+        self.kernel_size = kernel_size
+        self.strides = strides
+
         self.conv_1 = Conv2DBn(filter_num=filter_num,
                                kernel_size=kernel_size,
                                strides=strides,
@@ -34,6 +38,18 @@ class ResidualBlock(tf.keras.layers.Layer):
                                      kernel_size=(1, 1),
                                      strides=strides,
                                      output_activation=False)
+
+    def get_config(self):
+
+        config = super(ResidualBlock, self).get_config()
+        config.update({"filter_num": self.filter_num,
+                       "kernel_size": self.kernel_size,
+                       "strides": self.strides})
+
+        return config
+
+    def from_config(cls, config):
+        return cls(**config)
 
     def call(self,
              inputs,

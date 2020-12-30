@@ -19,6 +19,11 @@ class Conv2DBnBottleneck(tf.keras.layers.Layer):
 
         super(Conv2DBnBottleneck, self).__init__()
 
+        self.filter_num = filter_num
+        self.kernel_size = kernel_size
+        self.strides = strides
+        self.output_activation = output_activation
+
         self.conv_1 = Conv2DBn(filter_num=filter_num[0],
                                kernel_size=(1, 1),
                                output_activation=True)
@@ -31,6 +36,19 @@ class Conv2DBnBottleneck(tf.keras.layers.Layer):
         self.conv_3 = Conv2DBn(filter_num=filter_num[2],
                                kernel_size=(1, 1),
                                output_activation=output_activation)
+
+    def get_config(self):
+
+        config = super(Conv2DBnBottleneck, self).get_config()
+        config.update({"filter_num": self.filter_num,
+                       "kernel_size": self.kernel_size,
+                       "strides": self.strides,
+                       "output_activation": self.output_activation})
+
+        return config
+
+    def from_config(cls, config):
+        return cls(**config)
 
     def call(self,
              inputs,
