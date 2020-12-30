@@ -23,6 +23,12 @@ class UNet5(tf.keras.Model):
 
         super(UNet5, self).__init__()
 
+        # Fill model configuration parameters
+        self.num_filters = num_filters
+        self.num_classes = num_classes
+        self.output_activation = output_activation
+
+        # Instantiate model layers
         self.encoder_conv_1 = Conv2DBnX2(filter_num=num_filters[0],
                                          kernel_size=(3, 3))
 
@@ -79,7 +85,18 @@ class UNet5(tf.keras.Model):
         self.head_conv = tf.keras.layers.Conv2D(filters=num_classes,
                                                 kernel_size=(1, 1))
 
-        self.output_activation = tf.keras.layers.Activation(activation=output_activation)
+        self.final_activation = tf.keras.layers.Activation(activation=output_activation)
+
+    def get_config(self):
+
+        model_configuration = {"num_filters": self.num_filters,
+                               "num_classes": self.num_classes,
+                               "output_activation": self.output_activation}
+
+        return model_configuration
+
+    def from_config(cls, config, custom_objects=None):
+        return cls(**config)
 
     def call(self,
              inputs,
@@ -124,6 +141,6 @@ class UNet5(tf.keras.Model):
         x = self.decoder_conv_5(x, training=training)
 
         x = self.head_conv(x)
-        output = self.output_activation(x)
+        output = self.final_activation(x)
 
         return output

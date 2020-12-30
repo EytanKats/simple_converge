@@ -11,6 +11,10 @@ class ResNet18(tf.keras.Model):
     def __init__(self, num_classes=1000):
         super(ResNet18, self).__init__()
 
+        # Fill model configuration parameters
+        self.num_classes = num_classes
+
+        # Instantiate model layers
         self.conv = tf.keras.layers.Conv2D(filters=64,
                                            kernel_size=(7, 7),
                                            strides=(2, 2),
@@ -57,6 +61,13 @@ class ResNet18(tf.keras.Model):
         self.global_avg_pool = tf.keras.layers.GlobalAveragePooling2D()
 
         self.fc = tf.keras.layers.Dense(units=num_classes, activation=tf.keras.activations.softmax)
+
+    def get_config(self):
+        model_configuration = {"num_classes": self.num_classes}
+        return model_configuration
+
+    def from_config(cls, config, custom_objects=None):
+        return cls(**config)
 
     def call(self,
              inputs,
