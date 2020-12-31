@@ -99,7 +99,7 @@ def train(settings,
         if settings.load_model:
             settings.model_args["load_model_path"] = settings.load_model_path[fold]
 
-        settings.model_args["saved_model_path"] = os.path.join(fold_simulation_folder, settings.saved_model_name)
+        settings.model_args["save_model_path"] = os.path.join(fold_simulation_folder, settings.saved_model_name)
         settings.model_args["load_weights_path"] = os.path.join(fold_simulation_folder, settings.saved_model_name)
 
         for callback_args in settings.model_args["callbacks_args"]:
@@ -130,6 +130,7 @@ def train(settings,
         model.fit(fold=fold)
 
         # Load best weights from checkpoint and save model in 'SavedModel' format
+        model = _initialize_model(settings, models_collection)  # workaround to save model without compiling
         model.load_weights()
         model.save_model()
 
@@ -204,7 +205,7 @@ def test(settings,
 
         # Update path to model to be loaded for test for current fold
         if settings.test_simulation:  # Load model saved during simulation
-            settings.model_args["load_model_path"] = os.path.join(fold_simulation_folder, settings.saved_model_folder_name)
+            settings.model_args["load_model_path"] = os.path.join(fold_simulation_folder, settings.saved_model_name)
         else:  # Load model
             settings.model_args["load_model_path"] = settings.load_model_path[fold]
 

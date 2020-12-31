@@ -33,7 +33,7 @@ class BaseModel(BaseObject):
         self.save_weights_path = ""
 
         self.load_model_path = ""
-        self.saved_model_path = ""
+        self.save_model_path = ""
 
         self.kernel_initializer = "he_normal"
 

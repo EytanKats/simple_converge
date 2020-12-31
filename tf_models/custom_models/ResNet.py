@@ -56,7 +56,8 @@ class ResNet(BaseModel):
         else:
             self.logger.log("Unknown type of model: {0}".format(self.resnet_type))
 
-        # Build model to create its weights
+        # Workaround to initialize model properly
         if self.model is not None:
             batch_input_shape = (None, *self.input_shape)
             self.model.build(input_shape=batch_input_shape)
+            self.model.compute_output_shape(input_shape=batch_input_shape)
