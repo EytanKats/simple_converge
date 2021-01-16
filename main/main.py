@@ -193,10 +193,10 @@ def test(settings,
         settings.training_folds = [0]
 
     # Test model for each fold
-    for fold in settings.training_folds:
+    for fold_idx, fold in enumerate(settings.training_folds):
 
         logger.log("Test model for fold: {0}".format(fold))
-        logger.log("Number of samples to test: {0}".format(generator.test_info[fold].shape[0]))
+        logger.log("Number of samples to test: {0}".format(generator.test_info[fold_idx].shape[0]))
 
         # Update simulation directory for current fold
         fold_simulation_folder = os.path.join(settings.simulation_folder, str(fold))
@@ -207,7 +207,7 @@ def test(settings,
         if settings.test_simulation:  # Load model saved during simulation
             settings.model_args["load_model_path"] = os.path.join(fold_simulation_folder, settings.saved_model_name)
         else:  # Load model
-            settings.model_args["load_model_path"] = settings.load_model_path[fold]
+            settings.model_args["load_model_path"] = settings.load_model_path[fold_idx]
 
         # Visualize training metrics
         if settings.test_simulation:
@@ -220,24 +220,24 @@ def test(settings,
         model = _initialize_model(settings, models_collection)
 
         # Calculate predictions
-        test_predictions = model.predict(run_mode=RunMode.TEST, fold=fold)
+        test_predictions = model.predict(run_mode=RunMode.TEST, fold=fold_idx)
 
         # Get data
-        test_data = generator.get_pair(run_mode=RunMode.TEST, preprocess=True, augment=False, get_label=True, get_data=True, fold=fold)
-        original_test_data = generator.get_pair(run_mode=RunMode.TEST, preprocess=False, augment=False, get_label=True, get_data=True, fold=fold)
+        test_data = generator.get_pair(run_mode=RunMode.TEST, preprocess=True, augment=False, get_label=True, get_data=True, fold=fold_idx)
+        original_test_data = generator.get_pair(run_mode=RunMode.TEST, preprocess=False, augment=False, get_label=True, get_data=True, fold=fold_idx)
 
         # Apply postprocessing
         postprocessed_test_predictions = dataset.apply_postprocessing(test_predictions, test_data, original_test_data,
-                                                                      generator.test_info[fold], fold, run_mode=RunMode.TEST)
+                                                                      generator.test_info[fold_idx], fold, run_mode=RunMode.TEST)
 
         # Calculate metrics
         dataset.calculate_fold_metrics(postprocessed_test_predictions, test_data, original_test_data,
-                                       generator.test_info[fold], fold, fold_simulation_folder)
+                                       generator.test_info[fold_idx], fold, fold_simulation_folder)
 
         # Save tested data
         if settings.save_tested_data:
             dataset.save_tested_data(postprocessed_test_predictions, test_data, original_test_data,
-                                     generator.test_info[fold], fold, fold_simulation_folder)
+                                     generator.test_info[fold_idx], fold, fold_simulation_folder)
 
     dataset.log_metrics(settings.simulation_folder)
     logger.end()
@@ -280,7 +280,7 @@ def inference(settings,
     settings.model_args["load_model_path"] = settings.load_model_path
 
     # Copy model files to simulation folder
-    shutil.copytree(settings.load_model_path, settings.simulation_folder)
+    shutil.copytree(settings.load_model_path, os.path.join(settings.simulation_folder, "model"))
 
     # Build model
     settings.model_args["model_name"] = "base_model"  # change settings to build base model
