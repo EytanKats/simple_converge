@@ -52,8 +52,8 @@ class CheckpointCallback(BaseCallback):
         """
 
         callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path,
-                                                       save_best_only=self.save_best_only,
-                                                       save_weights_only=self.save_weights_only,
-                                                       monitor=self.monitor)
+                                                      save_best_only=self.save_best_only,
+                                                      save_weights_only=self.save_weights_only,
+                                                      monitor=self.monitor)
 
         return callback

@@ -61,14 +61,14 @@ class MnistDataset(BaseClassesDataset):
 
         self.confusion_matrix = np.zeros(shape=(len(self.class_labels), len(self.class_labels)), dtype=np.int)
 
-    def _get_data(self, info_row):
+    def _get_data(self, info_row, run_mode=RunMode.TRAINING):
 
         path = info_row[self.data_path_column]
         data = cv2.imread(path, flags=cv2.IMREAD_GRAYSCALE)
 
         return data
 
-    def _get_label(self, info_row):
+    def _get_label(self, info_row, run_mode=RunMode.TRAINING):
 
         label = np.zeros(shape=(len(self.class_labels),))
         label[info_row[self.label_column]] = 1
