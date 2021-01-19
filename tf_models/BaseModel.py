@@ -1,4 +1,3 @@
-import abc
 import tensorflow as tf
 
 from base.BaseObject import BaseObject
@@ -14,7 +13,7 @@ from tf_optimizers.optimizers_collection import optimizers_collection
 class BaseModel(BaseObject):
 
     """
-    This abstract class defines common methods to all Tensorflow models
+    This class defines common methods to all Tensorflow models
     """
 
     def __init__(self):
@@ -30,15 +29,11 @@ class BaseModel(BaseObject):
 
         self.generator = None
 
-        self.load_weights_path = None
-        self.save_weights_path = None
+        self.load_weights_path = ""
+        self.save_weights_path = ""
 
-        self.inputs_signature = None
-        self.outputs_signature = None
-        self.saved_model_folder = None
-
-        self.model_architecture_file_path = ""
-        self.saved_model_folder_path = ""
+        self.load_model_path = ""
+        self.save_model_path = ""
 
         self.kernel_initializer = "he_normal"
 
@@ -73,20 +68,11 @@ class BaseModel(BaseObject):
         if "save_weights_path" in self.params.keys():
             self.save_weights_path = self.params["save_weights_path"]
 
-        if "inputs_signature" in self.params.keys():
-            self.inputs_signature = self.params["inputs_signature"]
+        if "load_model_path" in self.params.keys():
+            self.load_model_path = self.params["load_model_path"]
 
-        if "outputs_signature" in self.params.keys():
-            self.outputs_signature = self.params["outputs_signature"]
-
-        if "saved_model_folder" in self.params.keys():
-            self.saved_model_folder = self.params["saved_model_folder"]
-
-        if "model_architecture_file_path" in self.params.keys():
-            self.model_architecture_file_path = self.params["model_architecture_file_path"]
-
-        if "saved_model_folder_path" in self.params.keys():
-            self.saved_model_folder_path = self.params["saved_model_folder_path"]
+        if "save_model_path" in self.params.keys():
+            self.save_model_path = self.params["save_model_path"]
 
         if "kernel_initializer" in self.params.keys():
             self.kernel_initializer = self.params["kernel_initializer"]
@@ -118,7 +104,6 @@ class BaseModel(BaseObject):
         if "prediction_batch_size" in self.params.keys():
             self.prediction_batch_size = self.params["prediction_batch_size"]
 
-    @abc.abstractmethod
     def build(self):
         pass
 
@@ -129,23 +114,10 @@ class BaseModel(BaseObject):
         self.model.save_weights(self.save_weights_path)
 
     def save_model(self):
-        self.model.save(self.saved_model_folder_path)
+        self.model.save(self.save_model_path)
 
     def load_model(self):
-        self.model = tf.keras.models.load_model(self.saved_model_folder_path)
-
-    def to_json(self):
-        model_json = self.model.to_json()
-        with open(self.model_architecture_file_path, "w") as json_file:
-            json_file.write(model_json)
-            
-    def from_json(self):
-        json_file = open(self.model_architecture_file_path, "r")
-        json_model = json_file.read()
-        json_file.close()
-        model = tf.keras.models.model_from_json(json_model)
-        
-        return model
+        self.model = tf.keras.models.load_model(self.load_model_path)
 
     def _get_regularizer(self):
 
@@ -262,7 +234,7 @@ class BaseModel(BaseObject):
                                                  get_data=True,
                                                  fold=fold)
 
-        self.load_weights()
+        self.load_model()
         predictions = self.model.predict(inputs, batch_size=self.prediction_batch_size, verbose=1)
 
         return predictions
@@ -276,7 +248,7 @@ class BaseModel(BaseObject):
                                                  get_data=True,
                                                  fold=fold)
 
-        self.load_weights()
+        self.load_model()
         results = self.model.evaluate(inputs, labels, batch_size=self.prediction_batch_size, verbose=1)
 
         return results

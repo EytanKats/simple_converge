@@ -1,28 +1,36 @@
-from tf_models.UNet import UNet
-from tf_models.ResNet50 import ResNet50
-from tf_models.ResNet101 import ResNet101
-from tf_models.ResNet152 import ResNet152
-from tf_models.ResNet50V2 import ResNet50V2
-from tf_models.DenseNet121 import DenseNet121
-from tf_models.EfficientNetB5 import EfficientNetB5
-from tf_models.EfficientNetB6 import EfficientNetB6
-from tf_models.EfficientNetB7 import EfficientNetB7
+from tf_models.BaseModel import BaseModel
 
-from tf_models.toy_models.ClassificationNet import ClassificationNet
+from tf_models.third_party_models.UNet import UNet as UNet_TF
+from tf_models.third_party_models.ResNet50 import ResNet50 as ResNet50_TF
+from tf_models.third_party_models.ResNet50V2 import ResNet50V2 as ResNet50V2_TF
+from tf_models.third_party_models.ResNet101 import ResNet101 as ResNet101_TF
+from tf_models.third_party_models.ResNet152 import ResNet152 as ResNet152_TF
+from tf_models.third_party_models.DenseNet121 import DenseNet121 as DenseNet121_TF
+from tf_models.third_party_models.EfficientNetB5 import EfficientNetB5 as EfficientNetB5_EfficientNet
+from tf_models.third_party_models.EfficientNetB6 import EfficientNetB6 as EfficientNetB6_EfficientNet
+from tf_models.third_party_models.EfficientNetB7 import EfficientNetB7 as EfficientNetB7_EfficientNet
+
+from tf_models.custom_models.ResNet import ResNet as ResNet_Custom
+from tf_models.custom_models.UNet import UNet as UNet_Custom
+from tf_models.custom_models.KiUNet import KiUNet as KiUNet_Custom
 
 models_collection = {
 
-    "resnet_50": ResNet50,
-    "resnet_101": ResNet101,
-    "resnet_152": ResNet152,
-    "resnet_50_v2": ResNet50V2,
-    "densenet_121": DenseNet121,
-    "efficientnet_b5": EfficientNetB5,
-    "efficientnet_b6": EfficientNetB6,
-    "efficientnet_b7": EfficientNetB7,
+    "base_model": BaseModel,
 
-    "unet": UNet,
+    "unet_tf": UNet_TF,
+    "resnet_50_tf": ResNet50_TF,
+    "resnet_101_tf": ResNet101_TF,
+    "resnet_152_tf": ResNet152_TF,
+    "resnet_50_v2_tf": ResNet50V2_TF,
+    "densenet_121_tf": DenseNet121_TF,
 
-    "toy_classification_net": ClassificationNet
+    "efficientnet_b5_efficientnet": EfficientNetB5_EfficientNet,
+    "efficientnet_b6_efficientnet": EfficientNetB6_EfficientNet,
+    "efficientnet_b7_efficientnet": EfficientNetB7_EfficientNet,
+
+    "resnet_custom": ResNet_Custom,
+    "unet_custom": UNet_Custom,
+    "kiu_net_custom": KiUNet_Custom
 
 }
