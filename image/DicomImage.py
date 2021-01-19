@@ -1,6 +1,9 @@
 import cv2
-import pydicom
 import numpy as np
+
+import pydicom
+from pydicom import pixel_data_handlers
+
 from image.Image import Image
 
 
@@ -27,26 +30,28 @@ class DicomImage(Image):
 
         """
         This method loads DICOM dataset and extracts pixel data in RGB format from it
-        :return: None
+        :return: numpy array of pixel data if succeeded to load, else 'None' will be return
         """
 
         self.path = path
         self.dataset = pydicom.dcmread(path)
-        self.pixel_data = self.dataset.pixel_array
+
+        try:
+            self.pixel_data = self.dataset.pixel_array
+        except RuntimeError as e:
+            print("Failed to read Dicom pixel data for {0}: {1}".format(self.path, str(e)))
+            return None
 
         # Currently we support only one color space conversion
         if self._color_space_tag in self.dataset:
 
             if self.dataset[self._color_space_tag].value == "YBR_FULL_422":
 
-                if len(self.pixel_data.shape) == 4:  # multi_frame
-                    converted_data = np.zeros_like(self.pixel_data)
-                    for frame in range(self.pixel_data.shape[0]):
-                        converted_data[frame] = cv2.cvtColor(self.pixel_data[frame], cv2.COLOR_YCrCb2RGB)
-                    self.pixel_data = converted_data
+                self.pixel_data = pixel_data_handlers.convert_color_space(self.pixel_data, "YBR_FULL_422", "RGB")
 
-                else:  # single_frame
-                    self.pixel_data = cv2.cvtColor(self.pixel_data, cv2.COLOR_YCrCb2RGB)
+            if self.dataset[self._color_space_tag].value not in ["YBR_FULL_422", "RGB", "MONOCHROME2"]:
+                print("Unknown color space of pixel data for {0}: '{1}' ".format(self.path, self.dataset[self._color_space_tag].value))
+                self.pixel_data = None
+                return None
 
-            if self.dataset[self._color_space_tag].value not in ["YBR_FULL_422", "RGB"]:
-                print("Unknown color space of pixel data: '{0}'".format(self.dataset[self._color_space_tag].value))
+        return self.pixel_data
