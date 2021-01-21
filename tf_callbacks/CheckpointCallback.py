@@ -19,7 +19,7 @@ class CheckpointCallback(BaseCallback):
 
         self.checkpoint_path = None
         self.save_best_only = True
-        self.save_weights_only = False
+        self.save_weights_only = True
         self.monitor = "val_loss"
 
     def parse_args(self, **kwargs):
