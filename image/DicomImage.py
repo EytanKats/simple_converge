@@ -30,11 +30,16 @@ class DicomImage(Image):
 
         """
         This method loads DICOM dataset and extracts pixel data in RGB format from it
-        :return: numpy array of pixel data if succeeded to load, else 'None' will be return
+        :return: numpy array of pixel data if succeeded to load, else - None
         """
 
         self.path = path
-        self.dataset = pydicom.dcmread(path)
+
+        try:
+            self.dataset = pydicom.dcmread(path)
+        except OSError as e:
+            print("Failed to read Dicom for {0}: {1}".format(self.path, str(e)))
+            return None
 
         try:
             self.pixel_data = self.dataset.pixel_array
