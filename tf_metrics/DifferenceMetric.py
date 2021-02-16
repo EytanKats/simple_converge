@@ -135,7 +135,7 @@ class DifferenceMetric(BaseMetric):
         :return: multi-scale structural similarity metric
         """
 
-        ssim = tf.reduce_mean(tf.image.ssim_multiscale(y_true, y_pred, power_factors=[0.0448, 0.2856, 0.3001, 0.2363], max_val=1.0))
+        ssim = tf.reduce_mean(tf.image.ssim_multiscale(y_true, y_pred, power_factors=self.ms_ssim_power_factors, max_val=1.0))
 
         if self.loss:
             res = 1 - ssim
