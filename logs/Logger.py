@@ -1,7 +1,7 @@
 import os
 import logging
 
-from logger.LogLevels import LogLevels
+from logs.LogLevels import LogLevels
 from base.BaseObject import BaseObject
 
 

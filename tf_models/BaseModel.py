@@ -2,7 +2,7 @@ import tensorflow as tf
 
 from base.BaseObject import BaseObject
 from utils.RunMode import RunMode
-from logger.LogLevels import LogLevels
+from logs.LogLevels import LogLevels
 
 from tf_regularizers.regularizers_collection import regularizers_collection
 from tf_metrics.metrics_collection import metrics_collection
@@ -254,5 +254,5 @@ class BaseModel(BaseObject):
         return results
 
     def summary(self):
-        self._log("Model Architecture", level=LogLevels.DEBUG, console=True)
-        self.model.summary(print_fn=lambda x: self._log(x, level=LogLevels.DEBUG, console=True))
+        self.logger.log("Model Architecture", level=LogLevels.DEBUG, console=True)
+        self.model.summary(print_fn=lambda x: self.logger.log(x, level=LogLevels.DEBUG, console=True))

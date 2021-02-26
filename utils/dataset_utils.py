@@ -26,46 +26,6 @@ def load_dataset_file(dataset_file_path):
     return data_info
 
 
-def apply_filters(dataset, filters):
-
-    """
-    This method applies filters on dataset.
-    The filters have to be of the following form: {"feature_1": {"action_1_1": value_1_1, "action_1_2": value_1_2}, "feature_2": {...}}:
-     - feature is a column name of pandas dataframe
-     - actions and values define range of values to filter; can be one of the following: "max_open", "max_close", "min_open", "min_close", "equal"
-     - "func" is a specific action that defines mapping from feature values and applied before the filtering; filtering will be applied on mapped feature values
-     - filters are applied as 'AND' logic
-    :param dataset: pandas dataframe that contains dataset information
-    :param filters: dictionary of the filters
-    :return: pandas dataframe that contains filtered dataset information
-    """
-
-    filtered_info = dataset
-    for feature in filters.keys():
-
-        if "func" in filters[feature].keys():
-            calculated_feature = filtered_info[feature].apply(filters[feature]["func"])
-        else:
-            calculated_feature = filtered_info[feature]
-
-        if "max_open" in filters[feature].keys():
-            filtered_info = filtered_info.loc[calculated_feature < filters[feature]["max_open"]]
-
-        if "max_close" in filters[feature].keys():
-            filtered_info = filtered_info.loc[calculated_feature <= filters[feature]["max_close"]]
-
-        if "min_open" in filters[feature].keys():
-            filtered_info = filtered_info.loc[calculated_feature > filters[feature]["min_open"]]
-
-        if "min_close" in filters[feature].keys():
-            filtered_info = filtered_info.loc[calculated_feature >= filters[feature]["min_close"]]
-
-        if "equal" in filters[feature].keys():
-            filtered_info = filtered_info.loc[calculated_feature == filters[feature]["equal"]]
-
-    return filtered_info
-
-
 def create_dataset(data_template, mask_template, classification=False, save_dataset_file=False, output_dataset_file_path=""):
 
     """

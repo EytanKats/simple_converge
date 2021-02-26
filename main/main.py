@@ -7,83 +7,89 @@ import glob
 import shutil
 import pandas as pd
 
-from plots import plots
-from logger.Logger import Logger
 from utils.RunMode import RunMode
 from utils.dataset_utils import load_dataset_file
+from plots import plots
+
+from logs.Logger import Logger
+from data.DatasetSplitter import DatasetSplitter
+from tf_sequences.Sequence import Sequence
 
 
-def _initialize_logger(settings):
+def initialize_logger(settings):
 
-    # Initialize logger
     logger = Logger()
     logger.parse_args(params=settings.logger_args)
     logger.start(settings.simulation_folder)
     logger.log(settings.log_message)
-
-    # Set arguments with logger
-    settings.model_args["logger"] = logger
-    settings.dataset_args["logger"] = logger
-    settings.generator_args["logger"] = logger
-
-    return settings, logger
+    return logger
 
 
-def _initialize_dataset(settings, dataset, run_mode):
+def initialize_dataset(settings, dataset, logger):
 
-    # Initialize dataset
     dataset.parse_args(params=settings.dataset_args)
-    dataset.initialize_dataset(run_mode)
+    dataset.set_logger(logger)
 
-    # Set generator arguments with dataset
-    settings.generator_args["dataset"] = dataset
-
-    return settings, dataset
+    return dataset
 
 
-def _initialize_generator(settings, generator):
+def initialize_data_splitter(settings, logger):
 
-    # Initialize generator
-    generator.parse_args(params=settings.generator_args)
+    dataset_splitter = DatasetSplitter()
+    dataset_splitter.parse_args(params=settings.dataset_splitter_args)
+    dataset_splitter.set_logger(logger)
 
-    # Set model arguments with generator
-    settings.model_args["generator"] = generator
-
-    return settings, generator
+    return dataset_splitter
 
 
-def _initialize_model(settings, models_collection):
+def initialize_model(settings, models_collection, logger, train_sequence=None, val_sequence=None):
 
-    # Build model
-    model_name = settings.model_args["model_name"]  # get model from models collection
+    model_name = settings.model_args["model_name"]
     model_fn = models_collection[model_name]
     model = model_fn()
+
     model.parse_args(params=settings.model_args)
+    model.set_logger(logger)
+
+    if train_sequence is not None:
+        model.set_train_sequence()
+
+    if val_sequence is not None:
+        model.set_val_sequence()
+
     model.build()
 
     return model
 
 
-def train(settings,
-          dataset,
-          generator,
-          models_collection):
+def initialize_sequence(settings, logger, dataset_df, dataset):
+
+    sequence = Sequence()
+    sequence.parse_args(params=settings.sequence_args)
+    sequence.set_logger(logger)
+    sequence.set_dataset_df(dataset_df)
+    sequence.set_dataset(dataset)
+
+    return sequence
+
+
+def train(settings, dataset, models_collection):
 
     # Create simulations directory
     if not os.path.exists(settings.simulation_folder):
         os.makedirs(settings.simulation_folder)
 
     # Copy settings file to simulation directory
-    # Need to be deleted when settings will be serialized to .json file
     shutil.copyfile(settings.settings_file_name, os.path.join(settings.simulation_folder, os.path.basename(settings.settings_file_name)))
 
-    # Initialize logger, dataset and generator
-    settings, logger = _initialize_logger(settings)
-    settings, dataset = _initialize_dataset(settings, dataset, run_mode=RunMode.TRAINING)
-    settings, generator = _initialize_generator(settings, generator)
+    # Initialize logger, dataset and data splitter
+    logger = initialize_logger(settings)
+    dataset = initialize_dataset(settings, dataset, logger)
+    data_splitter = initialize_data_splitter(settings, logger)
 
-    # Split data to training/validation/test and folds
-    generator.split_data()
+    # Split dataset to folds and farther to training, validation and test partitions
+    # TODO: Set data instead splitting it
+    data_splitter.split_dataset()
 
     # Train model for each fold
     for fold in settings.training_folds:
@@ -113,24 +119,29 @@ def train(settings,
             if callback_args["callback_name"] == "tensorboard":
                 callback_args["log_dir"] = os.path.join(fold_simulation_folder, settings.tensorboard_log_dir)
 
-        # Save training, validation and test data
-        generator.save_split_data(fold_simulation_folder, fold)
+        # Save training, validation and test data for current fold
+        data_splitter.save_dataframes_for_fold(fold_simulation_folder, fold)
+
+        # Initialize training and validation sequences for current fold
+        train_sequence = initialize_sequence(data_splitter.train_df_list[fold], dataset)
+        val_sequence = initialize_sequence(data_splitter.val_df_list[fold], dataset)
 
         # Build model
+        # TODO check loading model and its compilation
         if settings.load_model:
             settings.model_args["model_name"] = "base_model"  # change settings to load base model
-            model = _initialize_model(settings, models_collection)
+            model = initialize_model(settings, models_collection, logger, train_sequence, val_sequence)
             model.load_model()
 
         else:
-            model = _initialize_model(settings, models_collection)
+            model = initialize_model(settings, models_collection, logger, train_sequence, val_sequence)
             model.compile()
 
         # Train model
         model.fit(fold=fold)
 
         # Load best weights from checkpoint and save model in 'SavedModel' format
-        model = _initialize_model(settings, models_collection)  # workaround to save model without compiling
+        model = initialize_model(settings, models_collection, logger)  # workaround to save model without compiling
         model.load_weights()
         model.save_model()
 
@@ -296,3 +307,52 @@ def inference(settings,
         batch_predictions = dataset.apply_postprocessing(batch_predictions, inference_data, original_inference_data, inference_info, batch_idx, run_mode=RunMode.INFERENCE)
         dataset.save_inferenced_data(batch_predictions, inference_data, original_inference_data, inference_info, batch_idx, settings.simulation_folder)
 
+    def get_sequence(self, run_mode, fold=0):
+
+        """
+        This method creates instance of Sequence class that can be passed to model fit method
+        The Sequence object created for current fold and according to run mode (training or validation)
+        :param run_mode: run mode (can be training or validation)
+        :param fold: current fold
+        :return: Sequence object
+        """
+
+        self.sequence_args["dataset"] = self.dataset
+        if run_mode == RunMode.TRAINING:
+            self.sequence_args["data_info"] = self.train_info[fold]
+            self.sequence_args["steps_per_epoch"] = self.train_steps_per_epoch
+        else:
+            self.sequence_args["data_info"] = self.val_info[fold]
+            self.sequence_args["steps_per_epoch"] = self.val_steps_per_epoch
+
+        sequence = Sequence()
+        sequence.parse_args(params=self.sequence_args)
+        sequence.initialize()
+
+        return sequence
+
+    def get_sequence(self, run_mode, fold=0):
+
+        """
+        This method creates instance of keras.utils Sequence class that can be passed to model fit method
+        The Sequence object created for current fold and according to run mode (training or validation)
+        :param run_mode: run mode (can be training or validation)
+        :param fold: current fold
+        :return: Sequence object
+        """
+
+        self.sequence_args["dataset"] = self.dataset
+        if run_mode == RunMode.TRAINING:
+            self.sequence_args["data_info"] = self.train_info[fold]
+        else:
+            self.sequence_args["data_info"] = self.val_info[fold]
+
+            # Balance dataset during validation to get more insightful metrics (not sure that it's a right decision)
+            self.sequence_args["oversample"] = True
+            self.sequence_args["subsample"] = False
+
+        sequence = Sequence()
+        sequence.parse_args(params=self.sequence_args)
+        sequence.initialize()
+
+        return sequence
