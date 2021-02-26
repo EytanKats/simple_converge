@@ -70,6 +70,8 @@ def initialize_sequence(settings, logger, dataset_df, dataset):
     sequence.set_dataset_df(dataset_df)
     sequence.set_dataset(dataset)
 
+    sequence.initialize()
+
     return sequence
 
 
@@ -124,6 +126,11 @@ def train(settings, dataset, models_collection):
 
         # Initialize training and validation sequences for current fold
         train_sequence = initialize_sequence(data_splitter.train_df_list[fold], dataset)
+
+        # Balance dataset during validation by oversampling to get more insightful metrics (not sure that it's a right decision)
+        if settings.sequence_args["subsample"]:
+            settings.sequence_args["oversample"] = True
+            settings.sequence_args["subsample"] = False
         val_sequence = initialize_sequence(data_splitter.val_df_list[fold], dataset)
 
         # Build model
@@ -150,28 +157,51 @@ def train(settings, dataset, models_collection):
                             plot_metrics=settings.plot_metrics,
                             output_dir=fold_simulation_folder)
 
-        # Change 'load_model_path' of the model to the best model saved during training
-        model.load_model_path = os.path.join(fold_simulation_folder, settings.saved_model_name)
+        # Get test data
+        test_data = dataset.get_data_batch(batch_df=data_splitter.test_df_list[fold],
+                                           get_data=True,
+                                           get_label=True,
+                                           augment=False,
+                                           preprocess=True,
+                                           run_mode=RunMode.TEST)
+
+        original_test_data = None
+        if settings.get_original_data:
+            original_test_data = dataset.get_data_batch(batch_df=data_splitter.test_df_list[fold],
+                                                        get_data=True,
+                                                        get_label=True,
+                                                        augment=False,
+                                                        preprocess=True,
+                                                        run_mode=RunMode.TEST)
 
         # Calculate predictions
-        test_predictions = model.predict(run_mode=RunMode.TEST, fold=fold)
-
-        # Get test data
-        test_data = generator.get_pair(run_mode=RunMode.TEST, preprocess=True, augment=False, get_label=True, get_data=True, fold=fold)
-        original_test_data = generator.get_pair(run_mode=RunMode.TEST, preprocess=False, augment=False, get_label=True, get_data=True, fold=fold)
+        test_predictions = model.predict(test_data[0])
 
         # Apply postprocessing
-        postprocessed_test_predictions = dataset.apply_postprocessing(test_predictions, test_data, original_test_data,
-                                                                      generator.test_info[fold], fold, run_mode=RunMode.TRAINING)
+        postprocessed_test_predictions = dataset.apply_postprocessing_on_predictions_batch(predictions=test_predictions,
+                                                                                           preprocessed_data_and_labels=test_data,
+                                                                                           not_preprocessed_data_and_labels=original_test_data,
+                                                                                           batch_df=data_splitter.test_df_list[fold],
+                                                                                           batch_id=fold,
+                                                                                           run_mode=RunMode.TEST)
 
         # Calculate metrics
-        dataset.calculate_fold_metrics(postprocessed_test_predictions, test_data, original_test_data,
-                                       generator.test_info[fold], fold, fold_simulation_folder)
+        dataset.calculate_batch_metrics(postprocessed_predictions=postprocessed_test_predictions,
+                                        preprocessed_data_and_labels=test_data,
+                                        not_preprocessed_data_and_labels=original_test_data,
+                                        batch_df=data_splitter.test_df_list[fold],
+                                        batch_id=fold,
+                                        output_dir=fold_simulation_folder)
 
         # Save tested data
-        if settings.save_tested_data:
-            dataset.save_tested_data(postprocessed_test_predictions, test_data, original_test_data,
-                                     generator.test_info[fold], fold, fold_simulation_folder)
+        if settings.save_test_data:
+            dataset.save_data_batch(postprocessed_predictions=postprocessed_test_predictions,
+                                    output_dir=fold_simulation_folder,
+                                    not_postprocessed_predictions=test_predictions,
+                                    preprocessed_data_and_labels=test_data,
+                                    not_preprocessed_data_and_labels=original_test_data,
+                                    batch_df=data_splitter.test_df_list[fold],
+                                    batch_id=fold)
 
     dataset.log_metrics(settings.simulation_folder)
     logger.end()

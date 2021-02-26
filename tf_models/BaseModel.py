@@ -1,7 +1,6 @@
 import tensorflow as tf
 
 from base.BaseObject import BaseObject
-from utils.RunMode import RunMode
 from logs.LogLevels import LogLevels
 
 from tf_regularizers.regularizers_collection import regularizers_collection
@@ -25,10 +24,7 @@ class BaseModel(BaseObject):
 
         super(BaseModel, self).__init__()
 
-        self.model = None
-
-        self.generator = None
-
+        # Fields to be filled by parsing
         self.load_weights_path = ""
         self.save_weights_path = ""
 
@@ -49,6 +45,11 @@ class BaseModel(BaseObject):
 
         self.prediction_batch_size = None
 
+        # Fields to be filled during execution
+        self.model = None
+        self.train_sequence = None
+        self.val_sequence = None
+
     def parse_args(self, **kwargs):
         
         """
@@ -58,9 +59,6 @@ class BaseModel(BaseObject):
         """
 
         super(BaseModel, self).parse_args(**kwargs)
-
-        if "generator" in self.params.keys():
-            self.generator = self.params["generator"]
 
         if "load_weights_path" in self.params.keys():
             self.load_weights_path = self.params["load_weights_path"]
@@ -103,6 +101,26 @@ class BaseModel(BaseObject):
 
         if "prediction_batch_size" in self.params.keys():
             self.prediction_batch_size = self.params["prediction_batch_size"]
+
+    def set_train_sequence(self, train_sequence):
+
+        """
+        This method sets training data sequence that will be used in fit method
+        :param train_sequence: training data sequence
+        :return: None
+        """
+
+        self.train_sequence = train_sequence
+
+    def set_val_sequence(self, val_sequence):
+
+        """
+        This method sets validation data sequence that will be used in fit method
+        :param val_sequence: validation data sequence
+        :return: None
+        """
+
+        self.val_sequence = val_sequence
 
     def build(self):
         pass
@@ -217,40 +235,22 @@ class BaseModel(BaseObject):
                            optimizer=self._get_optimizer(),
                            metrics=self._get_metrics())
 
-    def fit(self, fold=0):
+    def fit(self):
 
         self.model.fit(
-            x=self.generator.get_sequence(run_mode=RunMode.TRAINING, fold=fold),
+            x=self.train_sequence,
             epochs=self.epochs,
             callbacks=self._get_callbacks(),
-            validation_data=self.generator.get_sequence(run_mode=RunMode.VALIDATION, fold=fold))
+            validation_data=self.val_sequence)
 
-    def predict(self, run_mode, fold=0):
+    def predict(self, data):
 
-        inputs, labels = self.generator.get_pair(run_mode,
-                                                 preprocess=True,
-                                                 augment=False,
-                                                 get_label=False,
-                                                 get_data=True,
-                                                 fold=fold)
-
-        self.load_model()
-        predictions = self.model.predict(inputs, batch_size=self.prediction_batch_size, verbose=1)
-
+        predictions = self.model.predict(data, batch_size=self.prediction_batch_size, verbose=1)
         return predictions
 
-    def evaluate(self, run_mode, fold=0):
+    def evaluate(self, data, labels):
 
-        inputs, labels = self.generator.get_pair(run_mode,
-                                                 preprocess=True,
-                                                 augment=False,
-                                                 get_label=True,
-                                                 get_data=True,
-                                                 fold=fold)
-
-        self.load_model()
-        results = self.model.evaluate(inputs, labels, batch_size=self.prediction_batch_size, verbose=1)
-
+        results = self.model.evaluate(data, labels, batch_size=self.prediction_batch_size, verbose=1)
         return results
 
     def summary(self):
