@@ -118,9 +118,12 @@ class DatasetSplitter(BaseObject):
         :return: None
         """
 
-        self.logger.log("Loading dataset file {0}".format(self.data_definition_file_path))
-        self.dataset_df = dataset_utils.load_dataset_file(self.data_definition_file_path)
-        self.logger.log("Dataset contains {0} entries".format(self.dataset_df.shape[0]))
+        if not self.data_definition_file_path:
+            self.logger.log("Loading dataset file {0}".format(self.data_definition_file_path))
+            self.dataset_df = dataset_utils.load_dataset_file(self.data_definition_file_path)
+            self.logger.log("Dataset contains {0} entries".format(self.dataset_df.shape[0]))
+        else:
+            self.logger.log("Data definition file path is not specified")
 
         if run_mode != run_mode.INFERENCE:
             self.train_df_list = [None] * self.folds_num

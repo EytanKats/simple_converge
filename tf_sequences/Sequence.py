@@ -147,7 +147,11 @@ class Sequence(tf.keras.utils.Sequence, BaseObject):
         for _, info_row in batch_dataset_df.iterrows():
 
             augment = self.apply_augmentations
-            data, label = self.dataset.get_pair(info_row, preprocess=True, augment=augment)
+            data, label = self.dataset.get_data_sample(info_row,
+                                                       get_data=True,
+                                                       get_label=True,
+                                                       augment=augment,
+                                                       preprocess=True)
 
             inputs.append(data)
             labels.append(label)

@@ -34,11 +34,10 @@ class BaseModel(BaseObject):
         self.kernel_initializer = "he_normal"
 
         self.regularizer_args = None
-        self.losses_args = None
+        self.loss_args = None
         self.optimizer_args = None
         self.metrics_args = None
 
-        self.steps_per_epoch = None
         self.epochs = None
         self.val_steps = None
         self.callbacks_args = None
@@ -78,8 +77,8 @@ class BaseModel(BaseObject):
         if "regularizer_args" in self.params.keys():
             self.regularizer_args = self.params["regularizer_args"]
 
-        if "losses_args" in self.params.keys():
-            self.losses_args = self.params["losses_args"]
+        if "loss_args" in self.params.keys():
+            self.loss_args = self.params["loss_args"]
 
         if "optimizer_args" in self.params.keys():
             self.optimizer_args = self.params["optimizer_args"]
@@ -87,14 +86,8 @@ class BaseModel(BaseObject):
         if "metrics_args" in self.params.keys():
             self.metrics_args = self.params["metrics_args"]
 
-        if "steps_per_epoch" in self.params.keys():
-            self.steps_per_epoch = self.params["steps_per_epoch"]
-
         if "epochs" in self.params.keys():
             self.epochs = self.params["epochs"]
-
-        if "val_steps" in self.params.keys():
-            self.val_steps = self.params["val_steps"]
 
         if "callbacks_args" in self.params.keys():
             self.callbacks_args = self.params["callbacks_args"]
@@ -163,7 +156,7 @@ class BaseModel(BaseObject):
 
         losses_fns = list()
         losses_weights = list()
-        for loss_args in self.losses_args:
+        for loss_args in self.loss_args:
             loss_class = metrics_collection[loss_args["metric_name"]]
             loss_obj = loss_class()
             loss_obj.parse_args(params=loss_args)

@@ -26,11 +26,6 @@ class BaseDataset(BaseObject):
 
         super(BaseDataset, self).__init__()
 
-        # Fields to be filled by parsing
-        self.data_definition_file = ""
-        self.data_column = ""
-        self.label_column = ""
-
     def parse_args(self,
                    **kwargs):
 
@@ -41,12 +36,6 @@ class BaseDataset(BaseObject):
         """
 
         super(BaseDataset, self).parse_args(**kwargs)
-
-        if "data_definition_file" in self.params.keys():
-            self.data_definition_file = self.params["data_definition_file"]
-
-        if "data_column" in self.params.keys():
-            self.data_column = self.params["data_column"]
 
     @abc.abstractmethod
     def get_data(self,

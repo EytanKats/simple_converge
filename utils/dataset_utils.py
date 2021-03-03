@@ -26,7 +26,7 @@ def load_dataset_file(dataset_file_path):
     return data_info
 
 
-def create_dataset(data_template, mask_template, classification=False, save_dataset_file=False, output_dataset_file_path=""):
+def create_dataset(data_template, mask_template=None, classification=False, save_dataset_file=False, output_dataset_file_path=""):
 
     """
     This method creates dataset file that contains columns with paths of the data files, group names and optionally paths of mask files and class names
