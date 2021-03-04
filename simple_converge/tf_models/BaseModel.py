@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow as tf
 
 from simple_converge.base.BaseObject import BaseObject
@@ -238,12 +239,12 @@ class BaseModel(BaseObject):
 
     def predict(self, data):
 
-        predictions = self.model.predict(data, batch_size=self.prediction_batch_size, verbose=1)
+        predictions = self.model.predict(np.array(data), batch_size=self.prediction_batch_size, verbose=1)
         return predictions
 
     def evaluate(self, data, labels):
 
-        results = self.model.evaluate(data, labels, batch_size=self.prediction_batch_size, verbose=1)
+        results = self.model.evaluate(np.array(data), np.array(labels), batch_size=self.prediction_batch_size, verbose=1)
         return results
 
     def summary(self):

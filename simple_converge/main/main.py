@@ -81,6 +81,7 @@ def initialize_sequence(settings, logger, dataset_df, dataset):
 def train(settings, dataset, models_collection):
 
     # Initialize ClearML task
+    # TODO improve ClearML integration
     task = None
     if settings.clear_ml:
         task = Task.init(project_name=settings.clear_ml_project_name,
@@ -98,7 +99,7 @@ def train(settings, dataset, models_collection):
 
     # Initialize logger, dataset and data splitter
     logger = initialize_logger(settings)
-    dataset = initialize_dataset(settings, dataset, logger)
+    dataset = initialize_dataset(settings, dataset, logger)  # TODO: add initialize method to dataset
     data_splitter = initialize_data_splitter(settings, logger)
 
     # Split dataset to folds and farther to training, validation and test partitions
@@ -190,7 +191,7 @@ def train(settings, dataset, models_collection):
                                                         get_data=True,
                                                         get_label=True,
                                                         augment=False,
-                                                        preprocess=True,
+                                                        preprocess=False,
                                                         run_mode=RunMode.TEST)
 
         # Calculate predictions
@@ -222,7 +223,7 @@ def train(settings, dataset, models_collection):
                                     batch_df=data_splitter.test_df_list[fold],
                                     batch_id=fold)
 
-    dataset.log_metrics(settings.simulation_folder)
+    dataset.aggregate_metrics_for_all_batches(settings.simulation_folder)
     logger.end()
 
 
@@ -294,7 +295,7 @@ def test(settings,
                                                         get_data=True,
                                                         get_label=True,
                                                         augment=False,
-                                                        preprocess=True,
+                                                        preprocess=False,
                                                         run_mode=RunMode.TEST)
 
         # Calculate predictions
@@ -326,7 +327,7 @@ def test(settings,
                                     batch_df=data_splitter.test_df_list[fold],
                                     batch_id=fold)
 
-    dataset.log_metrics(settings.simulation_folder)
+    dataset.aggregate_metrics_for_all_batches(settings.simulation_folder)
     logger.end()
 
 
