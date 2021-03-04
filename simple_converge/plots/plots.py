@@ -52,7 +52,8 @@ def training_plot(training_log_path,
                   plot_metrics,
                   output_dir,
                   x_lims=None,
-                  y_lims=None):
+                  y_lims=None,
+                  clear_ml_task=None):
 
     df = pd.read_csv(training_log_path)
 
@@ -76,6 +77,10 @@ def training_plot(training_log_path,
         plt.plot(epochs, train_metrics, 'b', label="training")
         plt.plot(epochs, val_metrics, 'r', label="validation")
         plt.legend(loc="best")
+
+        if clear_ml_task:
+            clear_ml_task.logger.report_matplotlib_figure(title=metric, series="", iteration=0, figure=plt)
+
         plt.savefig(os.path.join(output_dir, metric + ".png"))
         plt.close()
 

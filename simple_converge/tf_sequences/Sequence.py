@@ -227,17 +227,17 @@ class Sequence(tf.keras.utils.Sequence, BaseObject):
     def subsample_data(self, dataset_df):
 
         # Find number of samples in the smallest class
-        unique_values = dataset_df[self.subsampling_param].unique()
+        unique_values = dataset_df[self.subsampling_column].unique()
         rows_cnt = []
         for value in unique_values:
-            value_info = dataset_df.loc[dataset_df[self.subsampling_param] == value]
+            value_info = dataset_df.loc[dataset_df[self.subsampling_column] == value]
             rows_cnt.append(value_info.shape[0])
         min_count = np.min(rows_cnt)
 
         # Subsample equal number of samples from all the classes
         subsampled_dataset_df = pd.DataFrame()
         for value in unique_values:
-            value_info = dataset_df.loc[dataset_df[self.subsampling_param] == value]
+            value_info = dataset_df.loc[dataset_df[self.subsampling_column] == value]
             value_info_subsampled = value_info.sample(n=min_count)
             subsampled_dataset_df = subsampled_dataset_df.append(value_info_subsampled)
 
@@ -246,17 +246,17 @@ class Sequence(tf.keras.utils.Sequence, BaseObject):
     def oversample_data(self, dataset_df):
 
         # Find number of samples in the largest class
-        unique_values = dataset_df[self.oversampling_param].unique()
+        unique_values = dataset_df[self.oversampling_column].unique()
         rows_cnt = []
         for value in unique_values:
-            value_info = dataset_df.loc[dataset_df[self.oversampling_param] == value]
+            value_info = dataset_df.loc[dataset_df[self.oversampling_column] == value]
             rows_cnt.append(value_info.shape[0])
         max_count = np.max(rows_cnt)
 
         # Oversample equal number of samples from all the classes
         oversampled_dataset_df = pd.DataFrame()
         for value in unique_values:
-            value_info = dataset_df.loc[dataset_df[self.oversampling_param] == value]
+            value_info = dataset_df.loc[dataset_df[self.oversampling_column] == value]
             value_info_oversampled = value_info.sample(n=max_count, replace=True)
             oversampled_dataset_df = oversampled_dataset_df.append(value_info_oversampled)
 

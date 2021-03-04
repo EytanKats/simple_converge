@@ -8,6 +8,8 @@ import shutil
 import numpy as np
 import pandas as pd
 
+from clearml import Task
+
 from simple_converge.utils.RunMode import RunMode
 from simple_converge.utils.dataset_utils import load_dataset_file
 from simple_converge.plots import plots
@@ -77,6 +79,15 @@ def initialize_sequence(settings, logger, dataset_df, dataset):
 
 
 def train(settings, dataset, models_collection):
+
+    # Initialize ClearML task
+    task = None
+    if settings.clear_ml:
+        task = Task.init(project_name=settings.clear_ml_project_name,
+                         task_name=settings.clear_ml_task_name + "_" + str(np.random.randint(100)),
+                         auto_connect_frameworks=settings.clear_ml_connect_frameworks)
+
+        task.connect(settings.sequence_args)
 
     # Create simulations directory
     if not os.path.exists(settings.simulation_folder):
@@ -156,10 +167,14 @@ def train(settings, dataset, models_collection):
         model.load_weights()
         model.save_model()
 
+        if task:
+            task.update_output_model(model_uri="file://" + settings.model_args["save_model_path"])
+
         # Visualize training metrics
         plots.training_plot(training_log_path=os.path.join(fold_simulation_folder, settings.training_log_name),
                             plot_metrics=settings.plot_metrics,
-                            output_dir=fold_simulation_folder)
+                            output_dir=fold_simulation_folder,
+                            clear_ml_task=task)
 
         # Get test data
         test_data = dataset.get_data_batch(batch_df=data_splitter.test_df_list[fold],
