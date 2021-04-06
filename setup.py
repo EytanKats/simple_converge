@@ -8,7 +8,7 @@ with open('HISTORY.md') as history_file:
 
 setup_args = dict(
     name='simple_converge',
-    version='0.5.6',
+    version='0.5.7',
     description='framework for configurable training DL models',
     long_description_content_type="text/markdown",
     long_description=README + '\n\n' + HISTORY,
@@ -24,7 +24,7 @@ setup_args = dict(
 install_requires = [
     'numpy>=1.19.5',
     'pandas>=1.2.2',
-    'tensorflow>=2.4.1'
+    'tensorflow>=2.3.0'
 ]
 
 if __name__ == '__main__':
