@@ -36,8 +36,8 @@ class Classifier (BaseModel):
         self.num_classes = 1000
         self.input_shape = (None, None, 3)
         self.include_top = False
-        self.output_activation = "sigmoid"  # name of one of 'keras.activations' for last model layer
-        self.weights = "weights"  # one of 'None' (random initialization), 'imagenet' (pre-training on ImageNet)
+        self.output_activation = "softmax"  # name of one of 'keras.activations' for last model layer
+        self.weights = "imagenet"  # one of 'None' (random initialization), 'imagenet' (pre-training on ImageNet)
         self.freeze = False  # if 'True' set all layers (not including top) of 3rd party model as non-trainable
 
     def parse_args(self, **kwargs):
