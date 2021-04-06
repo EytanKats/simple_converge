@@ -111,12 +111,13 @@ def confusion_matrix_plot(output_path,
                           confusion_matrix,
                           classes_names,
                           normalize=False,
-                          cmap=plt.cm.Blues):
+                          cmap=plt.cm.Blues,
+                          fig_size=(10, 5.5)):
 
     if normalize:
         confusion_matrix = metrics.normalized_confusion_matrix(confusion_matrix)
 
-    plt.figure()
+    plt.figure(figsize=fig_size)
     plt.imshow(confusion_matrix, interpolation='nearest', cmap=cmap)
     plt.title("Confusion Matrix")
     plt.colorbar()
