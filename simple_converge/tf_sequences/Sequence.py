@@ -192,9 +192,9 @@ class Sequence(tf.keras.utils.Sequence, BaseObject):
         """
 
         if self.oversample:
-            dataset_df = self._oversample_data(self.dataset_df)
+            dataset_df = self.oversample_data(self.dataset_df)
         elif self.subsample:
-            dataset_df = self._subsample_data(self.dataset_df)
+            dataset_df = self.subsample_data(self.dataset_df)
         else:
             dataset_df = self.dataset_df
 
