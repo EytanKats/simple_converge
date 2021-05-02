@@ -330,7 +330,7 @@ class DatasetSplitter(BaseObject):
             self.test_df_list[fold] = pd.concat(groups_test_df_list)
 
             self.logger.log("For fold {0}:".format(fold))
-            self.logger.log("  {0} training samples".format(self.test_df_list[fold].shape[0]))
+            self.logger.log("  {0} training samples".format(self.train_df_list[fold].shape[0]))
             self.logger.log("  {0} validation samples".format(self.val_df_list[fold].shape[0]))
             self.logger.log("  {0} test samples".format(self.test_df_list[fold].shape[0]))
 
