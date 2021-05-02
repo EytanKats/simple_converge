@@ -22,9 +22,10 @@ setup_args = dict(
 )
 
 install_requires = [
-    'numpy>=1.19.5',
     'pandas>=1.2.2',
-    'tensorflow>=2.3.0'
+    'tensorflow>=2.3.0',
+    'segmentation-models>=1.0.1',
+    'classification-models>=0.1'
 ]
 
 if __name__ == '__main__':
