@@ -151,8 +151,12 @@ def train(settings, dataset, models_collection):
         # Build model
         # TODO check loading model and its compilation
         if settings.load_model:
+
+            temp_model_name = settings.model_args["model_name"]  # workaround to support secondary model initialization during saving (need to be initialized with original settings)
             settings.model_args["model_name"] = "base_model"  # change settings to load base model
             model = initialize_model(settings, models_collection, logger, train_sequence, val_sequence)
+            settings.model_args["model_name"] = temp_model_name
+
             model.load_model()
             model.compile()
 
