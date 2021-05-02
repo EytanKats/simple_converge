@@ -25,7 +25,8 @@ install_requires = [
     'pandas>=1.2.2',
     'tensorflow>=2.3.0',
     'segmentation-models>=1.0.1',
-    'classification-models>=0.1'
+    'classification-models>=0.1',
+    'keras-unet-collection>=0.0.18'
 ]
 
 if __name__ == '__main__':
