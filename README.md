@@ -1,2 +1,2 @@
-# dl_framework
-Framework for configurable training DL models and experiments management
+# Simple Converge
+Framework for configurable training of DL models
