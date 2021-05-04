@@ -8,12 +8,12 @@ class AttentionUNet(BaseModel):
     This class encapsulates AttentionUNet model implemented in keras_unet_collection package:
     https://github.com/yingkaisha/keras-unet-collection.
     UNet model can be created with different backbones all of which have pretrained on imagenet weights
-    (default is resnet50):
-    - vgg16, vgg19
-    - resnet50, resnet101, resnet152
-    - densenet121, densenet169, densenet201
-    - efficientnetb0, efficientnetb1, efficientnetb2, efficientnetb3, efficientnetb4, efficientnetb5,
-      efficientnetb6, efficientnetb7
+    (default is ResNet50):
+    - VGG16, VGG19
+    - ResNet50, ResNet101, ResNet152
+    - DenseNet121, DenseNet169, DenseNet201
+    - EfficientNetB0, EfficientNetB1, EfficientNetB2, EfficientNetB3, EfficientNetB4, EfficientNetB5,
+      EfficientNetB6, EfficientNetB7
     """
 
     def __init__(self):
@@ -34,7 +34,7 @@ class AttentionUNet(BaseModel):
         self.use_batch_normalization = True
         self.pooling = "max"
         self.unpooling = "bilinear"
-        self.backbone = "resnet50"
+        self.backbone = "ResNet50"
         self.encoder_weights = "imagenet"
         self.encoder_freeze = False
 
