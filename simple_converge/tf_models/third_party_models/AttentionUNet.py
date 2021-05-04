@@ -1,4 +1,4 @@
-import keras_unet_collection as uc
+from keras_unet_collection import models
 from simple_converge.tf_models.BaseModel import BaseModel
 
 
@@ -91,15 +91,15 @@ class AttentionUNet(BaseModel):
         :return: None
         """
 
-        self.model = uc.att_unet_2d(input_size=self.input_shape,
-                                    filter_num=self.filters,
-                                    n_labels=self.num_classes,
-                                    atten_activation=self.attention_activation,
-                                    output_activation=self.output_activation,
-                                    attention=self.attention_type,
-                                    batch_norm=self.use_batch_normalization,
-                                    pool=self.pooling,
-                                    unpool=self.unpooling,
-                                    backbone=self.backbone,
-                                    weights=self.encoder_weights,
-                                    freeze_backbone=self.encoder_freeze)
+        self.model = models.att_unet_2d(input_size=self.input_shape,
+                                        filter_num=self.filters,
+                                        n_labels=self.num_classes,
+                                        atten_activation=self.attention_activation,
+                                        output_activation=self.output_activation,
+                                        attention=self.attention_type,
+                                        batch_norm=self.use_batch_normalization,
+                                        pool=self.pooling,
+                                        unpool=self.unpooling,
+                                        backbone=self.backbone,
+                                        weights=self.encoder_weights,
+                                        freeze_backbone=self.encoder_freeze)
