@@ -4,6 +4,13 @@ from simple_converge.utils.constants import EPSILON
 
 def accuracy(predictions, ground_truth):
 
+    """
+    This method calculates accuracy metric between predictions and ground truth values
+    :param predictions: predictions (1D array)
+    :param ground_truth: ground truth values (1D array)
+    :return: accuracy score
+    """
+
     true_predicted_classes = np.equal(predictions, ground_truth)
     _accuracy = np.sum(true_predicted_classes) / len(ground_truth)
 
@@ -11,6 +18,13 @@ def accuracy(predictions, ground_truth):
 
 
 def kappa(predictions, ground_truth):
+
+    """
+    This method calculates kappa metric https://en.wikipedia.org/wiki/Cohen%27s_kappa between predictions and ground truth values
+    :param predictions: predictions (1D array)
+    :param ground_truth: ground truth values (1D array)
+    :return: kappa score
+    """
 
     agreement = accuracy(predictions, ground_truth)
 
@@ -28,12 +42,6 @@ def kappa(predictions, ground_truth):
         _kappa = (agreement - random_agreement + np.finfo(float).eps) / (1 - random_agreement + np.finfo(float).eps)
 
     return _kappa
-
-
-def normalized_confusion_matrix(confusion_matrix):
-
-    _normalized_confusion_matrix = confusion_matrix.astype('float') / confusion_matrix.sum(axis=1)[:, np.newaxis]
-    return _normalized_confusion_matrix
 
 
 def iou(predictions, ground_truth):
@@ -145,7 +153,7 @@ def signal_to_noise_ratio(data):
     """
     This method calculates signal-to-noise ratio
     :param data: image region based on which signal-to-noise ratio is calculated
-    :return: signal-to-noise ration
+    :return: signal-to-noise ratio
     """
 
     mean_target = np.mean(data)
@@ -154,3 +162,15 @@ def signal_to_noise_ratio(data):
     ratio = mean_target / std_target
 
     return ratio
+
+
+def normalized_confusion_matrix(confusion_matrix):
+
+    """
+    This method normalizes confusion matrix
+    :param confusion_matrix: confusion matrix (2D array)
+    :return: normalized confusion matrix
+    """
+
+    _normalized_confusion_matrix = confusion_matrix.astype('float') / confusion_matrix.sum(axis=1)[:, np.newaxis]
+    return _normalized_confusion_matrix
