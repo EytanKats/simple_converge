@@ -8,6 +8,7 @@ from simple_converge.tf_models.custom_models.KiUNet import KiUNet as KiUNet_Cust
 from simple_converge.tf_models.custom_models.ResNet import ResNet as ResNet_Custom
 
 from simple_converge.tf_models.third_party_models.UNet import UNet as UNet_3rdParty
+from simple_converge.tf_models.third_party_models.AttentionUNet import AttentionUNet as AttentionUnet_3rdParty
 from simple_converge.tf_models.third_party_models.Classifier import Classifier as Classifier_3rdParty
 
 models_collection = {
@@ -19,5 +20,6 @@ models_collection = {
     "kiu_net_custom": KiUNet_Custom,
 
     "unet_3rd_party": UNet_3rdParty,
+    "attention_unet_3rd_party": AttentionUnet_3rdParty,
     "classifier_3rd_party": Classifier_3rdParty
 }
