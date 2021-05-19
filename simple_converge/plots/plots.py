@@ -6,7 +6,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from skimage import color as ski_color
 
-from simple_converge.metrics import metrics
+from simple_converge.utils import metrics
 
 
 def line_plot(output_path,

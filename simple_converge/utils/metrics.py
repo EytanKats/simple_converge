@@ -1,5 +1,4 @@
 import numpy as np
-
 from simple_converge.utils.constants import EPSILON
 
 
