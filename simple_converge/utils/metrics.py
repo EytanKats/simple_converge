@@ -20,7 +20,8 @@ def accuracy(predictions, ground_truth):
 def kappa(predictions, ground_truth):
 
     """
-    This method calculates kappa metric https://en.wikipedia.org/wiki/Cohen%27s_kappa between predictions and ground truth values
+    This method calculates kappa metric https://en.wikipedia.org/wiki/Cohen%27s_kappa
+     between predictions and ground truth values
     :param predictions: predictions (1D array)
     :param ground_truth: ground truth values (1D array)
     :return: kappa score
