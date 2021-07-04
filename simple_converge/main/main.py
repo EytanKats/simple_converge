@@ -12,7 +12,7 @@ from clearml import Task
 
 from simple_converge.utils.RunMode import RunMode
 from simple_converge.utils.dataset_utils import load_dataset_file
-from simple_converge.plots import plots
+from simple_converge.utils import plots_matplotlib
 
 from simple_converge.logs.Logger import Logger
 from simple_converge.data.DatasetSplitter import DatasetSplitter
@@ -176,10 +176,10 @@ def train(settings, dataset, models_collection):
             task.update_output_model(model_uri="file://" + settings.model_args["save_model_path"])
 
         # Visualize training metrics
-        plots.training_plot(training_log_path=os.path.join(fold_simulation_folder, settings.training_log_name),
-                            plot_metrics=settings.plot_metrics,
-                            output_dir=fold_simulation_folder,
-                            clear_ml_task=task)
+        plots_matplotlib.training_plot(training_log_path=os.path.join(fold_simulation_folder, settings.training_log_name),
+                                       metrics_to_plot=settings.plot_metrics,
+                                       output_folder=fold_simulation_folder,
+                                       clear_ml_task=task)
 
         # Get test data
         test_data = dataset.get_data_batch(batch_df=data_splitter.test_df_list[fold],
@@ -275,9 +275,9 @@ def test(settings,
 
         # Visualize training metrics
         if settings.test_simulation:
-            plots.training_plot(training_log_path=os.path.join(fold_simulation_folder, settings.training_log_name),
-                                plot_metrics=settings.plot_metrics,
-                                output_dir=fold_simulation_folder)
+            plots_matplotlib.training_plot(training_log_path=os.path.join(fold_simulation_folder, settings.training_log_name),
+                                           metrics_to_plot=settings.plot_metrics,
+                                           output_folder=fold_simulation_folder)
 
         # Build model
         settings.model_args["model_name"] = "base_model"  # change settings to initialize base model
