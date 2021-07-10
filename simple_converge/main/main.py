@@ -18,6 +18,12 @@ from simple_converge.logs.Logger import Logger
 from simple_converge.data.DatasetSplitter import DatasetSplitter
 from simple_converge.tf_sequences.Sequence import Sequence
 
+from simple_converge.tf_models.models_collection import models_collection as sc_models_collection
+from simple_converge.tf_metrics.metrics_collection import metrics_collection as sc_metrics_collection
+from simple_converge.tf_callbacks.callbacks_collection import callbacks_collection as sc_callbacks_collection
+from simple_converge.tf_optimizers.optimizers_collection import optimizers_collection as sc_optimizers_collection
+from simple_converge.tf_regularizers.regularizers_collection import regularizers_collection as sc_regularizers_collection
+
 
 def initialize_logger(settings):
 
@@ -28,7 +34,9 @@ def initialize_logger(settings):
     return logger
 
 
-def initialize_dataset(settings, dataset, logger):
+def initialize_dataset(settings,
+                       dataset,
+                       logger):
 
     dataset.parse_args(params=settings.dataset_args)
     dataset.set_logger(logger)
@@ -36,7 +44,8 @@ def initialize_dataset(settings, dataset, logger):
     return dataset
 
 
-def initialize_data_splitter(settings, logger):
+def initialize_data_splitter(settings,
+                             logger):
 
     dataset_splitter = DatasetSplitter()
     dataset_splitter.parse_args(params=settings.data_splitter_args)
@@ -45,7 +54,20 @@ def initialize_data_splitter(settings, logger):
     return dataset_splitter
 
 
-def initialize_model(settings, models_collection, logger, train_sequence=None, val_sequence=None):
+def initialize_model(settings,
+                     logger,
+                     custom_models_collection=None,
+                     custom_metrics_collection=None,
+                     custom_callbacks_collection=None,
+                     custom_optimizers_collection=None,
+                     custom_regularizers_collection=None,
+                     train_sequence=None,
+                     val_sequence=None):
+
+    if custom_models_collection is not None:
+        models_collection = sc_models_collection.update(custom_models_collection)
+    else:
+        models_collection = sc_models_collection
 
     model_name = settings.model_args["model_name"]
     model_fn = models_collection[model_name]
@@ -53,6 +75,30 @@ def initialize_model(settings, models_collection, logger, train_sequence=None, v
 
     model.parse_args(params=settings.model_args)
     model.set_logger(logger)
+
+    if custom_metrics_collection is not None:
+        metrics_collection = sc_metrics_collection.update(custom_metrics_collection)
+    else:
+        metrics_collection = sc_metrics_collection
+    model.set_metrics_collection(metrics_collection)
+
+    if custom_callbacks_collection is not None:
+        callbacks_collection = sc_callbacks_collection.update(custom_callbacks_collection)
+    else:
+        callbacks_collection = sc_callbacks_collection
+    model.set_callbacks_collection(callbacks_collection)
+
+    if custom_optimizers_collection is not None:
+        optimizers_collection = sc_optimizers_collection.update(custom_optimizers_collection)
+    else:
+        optimizers_collection = sc_optimizers_collection
+    model.set_optimizers_collection(optimizers_collection)
+
+    if custom_regularizers_collection is not None:
+        regularizers_collection = sc_regularizers_collection.update(custom_regularizers_collection)
+    else:
+        regularizers_collection = sc_regularizers_collection
+    model.set_regularizers_collection(regularizers_collection)
 
     if train_sequence is not None:
         model.set_train_sequence(train_sequence)
@@ -65,7 +111,10 @@ def initialize_model(settings, models_collection, logger, train_sequence=None, v
     return model
 
 
-def initialize_sequence(settings, logger, dataset_df, dataset):
+def initialize_sequence(settings,
+                        logger,
+                        dataset_df,
+                        dataset):
 
     sequence = Sequence()
     sequence.parse_args(params=settings.sequence_args)
@@ -78,7 +127,13 @@ def initialize_sequence(settings, logger, dataset_df, dataset):
     return sequence
 
 
-def train(settings, dataset, models_collection):
+def train(settings,
+          dataset,
+          custom_models_collection=None,
+          custom_metrics_collection=None,
+          custom_callbacks_collection=None,
+          custom_optimizers_collection=None,
+          custom_regularizers_collection=None):
 
     # Initialize ClearML task
     # TODO improve ClearML integration
@@ -154,21 +209,38 @@ def train(settings, dataset, models_collection):
 
             temp_model_name = settings.model_args["model_name"]  # workaround to support secondary model initialization during saving (need to be initialized with original settings)
             settings.model_args["model_name"] = "base_model"  # change settings to load base model
-            model = initialize_model(settings, models_collection, logger, train_sequence, val_sequence)
+            model = initialize_model(settings,
+                                     logger,
+                                     custom_metrics_collection,
+                                     custom_callbacks_collection,
+                                     custom_optimizers_collection,
+                                     custom_regularizers_collection,
+                                     train_sequence,
+                                     val_sequence)
             settings.model_args["model_name"] = temp_model_name
 
             model.load_model()
             model.compile()
 
         else:
-            model = initialize_model(settings, models_collection, logger, train_sequence, val_sequence)
+            model = initialize_model(settings,
+                                     logger,
+                                     custom_models_collection,
+                                     custom_metrics_collection,
+                                     custom_callbacks_collection,
+                                     custom_optimizers_collection,
+                                     custom_regularizers_collection,
+                                     train_sequence,
+                                     val_sequence)
             model.compile()
 
         # Train model
         model.fit()
 
         # Load best weights from checkpoint and save model in 'SavedModel' format
-        model = initialize_model(settings, models_collection, logger)  # workaround to save model without compiling
+        model = initialize_model(settings,  # workaround to save model without compiling
+                                 logger,
+                                 custom_models_collection)
         model.load_weights()
         model.save_model()
 
@@ -232,8 +304,7 @@ def train(settings, dataset, models_collection):
 
 
 def test(settings,
-         dataset,
-         models_collection):
+         dataset):
 
     # Create simulations directory
     if not os.path.exists(settings.simulation_folder):
@@ -281,7 +352,8 @@ def test(settings,
 
         # Build model
         settings.model_args["model_name"] = "base_model"  # change settings to initialize base model
-        model = initialize_model(settings, models_collection, logger)
+        model = initialize_model(settings,
+                                 logger)
         model.load_model()
 
         # Get test data
@@ -336,8 +408,7 @@ def test(settings,
 
 
 def inference(settings,
-              dataset,
-              models_collection):
+              dataset):
 
     # Create simulations directory
     if not os.path.exists(settings.simulation_folder):
@@ -373,7 +444,9 @@ def inference(settings,
 
     # Build model
     settings.model_args["model_name"] = "base_model"  # change settings to initialize base model
-    model = initialize_model(settings, models_collection, logger)
+    model = initialize_model(settings,
+                             logger)
+
     model.load_model()
 
     for batch_idx in range(len(inference_df)):
