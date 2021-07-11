@@ -77,28 +77,20 @@ def initialize_model(settings,
     model.set_logger(logger)
 
     if custom_metrics_collection is not None:
-        metrics_collection = sc_metrics_collection.update(custom_metrics_collection)
-    else:
-        metrics_collection = sc_metrics_collection
-    model.set_metrics_collection(metrics_collection)
+        sc_metrics_collection.update(custom_metrics_collection)
+    model.set_metrics_collection(sc_metrics_collection)
 
     if custom_callbacks_collection is not None:
-        callbacks_collection = sc_callbacks_collection.update(custom_callbacks_collection)
-    else:
-        callbacks_collection = sc_callbacks_collection
-    model.set_callbacks_collection(callbacks_collection)
+        sc_callbacks_collection.update(custom_callbacks_collection)
+    model.set_callbacks_collection(sc_callbacks_collection)
 
     if custom_optimizers_collection is not None:
-        optimizers_collection = sc_optimizers_collection.update(custom_optimizers_collection)
-    else:
-        optimizers_collection = sc_optimizers_collection
-    model.set_optimizers_collection(optimizers_collection)
+        sc_optimizers_collection.update(custom_optimizers_collection)
+    model.set_optimizers_collection(sc_optimizers_collection)
 
     if custom_regularizers_collection is not None:
-        regularizers_collection = sc_regularizers_collection.update(custom_regularizers_collection)
-    else:
-        regularizers_collection = sc_regularizers_collection
-    model.set_regularizers_collection(regularizers_collection)
+        sc_regularizers_collection.update(custom_regularizers_collection)
+    model.set_regularizers_collection(sc_regularizers_collection)
 
     if train_sequence is not None:
         model.set_train_sequence(train_sequence)
