@@ -4,11 +4,6 @@ import tensorflow as tf
 from simple_converge.base.BaseObject import BaseObject
 from simple_converge.logs.LogLevels import LogLevels
 
-from simple_converge.tf_regularizers.regularizers_collection import regularizers_collection
-from simple_converge.tf_metrics.metrics_collection import metrics_collection
-from simple_converge.tf_callbacks.callbacks_collection import callbacks_collection
-from simple_converge.tf_optimizers.optimizers_collection import optimizers_collection
-
 
 class BaseModel(BaseObject):
 
@@ -49,6 +44,11 @@ class BaseModel(BaseObject):
         self.model = None
         self.train_sequence = None
         self.val_sequence = None
+
+        self.metrics_collection = None
+        self.callbacks_collection = None
+        self.regularizers_collection = None
+        self.optimizers_collection = None
 
     def parse_args(self, **kwargs):
         
@@ -96,6 +96,46 @@ class BaseModel(BaseObject):
         if "prediction_batch_size" in self.params.keys():
             self.prediction_batch_size = self.params["prediction_batch_size"]
 
+    def set_metrics_collection(self, metrics_collection):
+
+        """
+        This method sets metrics collection that will be available for model training
+        :param metrics_collection: dictionary of available metrics
+        :return: None
+        """
+
+        self.metrics_collection = metrics_collection
+
+    def set_callbacks_collection(self, callbacks_collection):
+
+        """
+        This method sets callbacks collection that will be available for model training
+        :param callbacks_collection: dictionary of available callbacks
+        :return: None
+        """
+
+        self.callbacks_collection = callbacks_collection
+
+    def set_optimizers_collection(self, optimizers_collection):
+
+        """
+        This method sets optimizers collection that will be available for model training
+        :param optimizers_collection: dictionary of available optimizers
+        :return: None
+        """
+
+        self.optimizers_collection = optimizers_collection
+
+    def set_regularizers_collection(self, regularizers_collection):
+
+        """
+        This method sets regularizers collection that will be available for model training
+        :param regularizers_collection: dictionary of available regularizers
+        :return: None
+        """
+
+        self.regularizers_collection = regularizers_collection
+
     def set_train_sequence(self, train_sequence):
 
         """
@@ -141,7 +181,7 @@ class BaseModel(BaseObject):
         if self.regularizer_args is None:
             return None
 
-        regularizer_class = regularizers_collection[self.regularizer_args["regularizer_name"]]
+        regularizer_class = self.regularizers_collection[self.regularizer_args["regularizer_name"]]
         regularizer_obj = regularizer_class()
         regularizer_obj.parse_args(params=self.regularizer_args)
         regularizer_fn = regularizer_obj.get_regularizer()
@@ -158,7 +198,7 @@ class BaseModel(BaseObject):
         losses_fns = list()
         losses_weights = list()
         for loss_args in self.loss_args:
-            loss_class = metrics_collection[loss_args["metric_name"]]
+            loss_class = self.metrics_collection[loss_args["metric_name"]]
             loss_obj = loss_class()
             loss_obj.parse_args(params=loss_args)
             loss_fn = loss_obj.get_metric()
@@ -174,7 +214,7 @@ class BaseModel(BaseObject):
         :return: optimizer
         """
 
-        optimizer_class = optimizers_collection[self.optimizer_args["optimizer_name"]]
+        optimizer_class = self.optimizers_collection[self.optimizer_args["optimizer_name"]]
         optimizer_obj = optimizer_class()
         optimizer_obj.parse_args(params=self.optimizer_args)
         optimizer_fn = optimizer_obj.get_optimizer()
@@ -193,7 +233,7 @@ class BaseModel(BaseObject):
 
             metrics_fns_for_output = list()
             for metric_args in metrics_args_for_output:
-                metric_class = metrics_collection[metric_args["metric_name"]]
+                metric_class = self.metrics_collection[metric_args["metric_name"]]
                 metric_obj = metric_class()
                 metric_obj.parse_args(params=metric_args)
                 metric_fn = metric_obj.get_metric()
@@ -212,7 +252,7 @@ class BaseModel(BaseObject):
 
         callbacks_fns = list()
         for callback_args in self.callbacks_args:
-            callback_class = callbacks_collection[callback_args["callback_name"]]
+            callback_class = self.callbacks_collection[callback_args["callback_name"]]
             callback_obj = callback_class()
             callback_obj.parse_args(params=callback_args)
             callback_fn = callback_obj.get_callback()
