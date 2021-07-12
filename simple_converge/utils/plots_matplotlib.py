@@ -98,7 +98,7 @@ def training_plot(training_log_path,
         train_metrics = df[metric]
         val_metrics = df["val_" + metric]
 
-        ax_acc = plt.figure(fig_size)
+        ax_acc = plt.figure(figsize=fig_size)
         ax_acc.set_facecolor("gainsboro")
         plt.title(metric)
         plt.grid(True)
@@ -144,7 +144,7 @@ def roc_plot(fpr,
 
     opt_idx = np.argmax(np.add(1 - fpr, tpr))
 
-    plt.figure(igsize=fig_size)
+    plt.figure(figsize=fig_size)
     plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve')
     plt.plot(fpr, thr, color='navy', lw=2, label='Threshold')
     plt.plot([0, 1], [0, 1], color='gray', linestyle='--', lw=2)
