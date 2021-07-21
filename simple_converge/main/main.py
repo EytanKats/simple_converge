@@ -444,9 +444,9 @@ def inference(settings,
 
     model.load_model()
 
-    for batch_idx in range(len(inference_df)):
+    for batch_idx in range(len(inference_df_list)):
 
-        inference_data = dataset.get_data_batch(batch_df=inference_df[batch_idx],
+        inference_data = dataset.get_data_batch(batch_df=inference_df_list[batch_idx],
                                                 get_data=True,
                                                 get_label=False,
                                                 augment=False,
@@ -455,7 +455,7 @@ def inference(settings,
 
         original_inference_data = None
         if settings.inference_args["get_original_inference_data"]:
-            original_inference_data = dataset.get_data_batch(batch_df=inference_df[batch_idx],
+            original_inference_data = dataset.get_data_batch(batch_df=inference_df_list[batch_idx],
                                                              get_data=True,
                                                              get_label=False,
                                                              augment=False,
@@ -468,7 +468,7 @@ def inference(settings,
         postprocessed_batch_predictions = dataset.apply_postprocessing_on_predictions_batch(predictions=batch_predictions,
                                                                                             preprocessed_data_and_labels=inference_data,
                                                                                             not_preprocessed_data_and_labels=original_inference_data,
-                                                                                            batch_df=inference_df[batch_idx],
+                                                                                            batch_df=inference_df_list[batch_idx],
                                                                                             batch_id=batch_idx,
                                                                                             run_mode=RunMode.INFERENCE)
 
@@ -481,5 +481,5 @@ def inference(settings,
                                     not_postprocessed_predictions=batch_predictions,
                                     preprocessed_data_and_labels=inference_data,
                                     not_preprocessed_data_and_labels=original_inference_data,
-                                    batch_df=inference_df[batch_idx],
+                                    batch_df=inference_df_list[batch_idx],
                                     batch_id=batch_idx)
