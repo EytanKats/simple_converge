@@ -132,10 +132,13 @@ def train(settings,
     task = None
     if settings.clear_ml:
         task = Task.init(project_name=settings.clear_ml_project_name,
-                         task_name=settings.clear_ml_task_name + "_" + str(np.random.randint(100)),
+                         task_name=settings.clear_ml_task_name,
                          auto_connect_frameworks=settings.clear_ml_connect_frameworks)
 
-        task.connect(settings.sequence_args)
+        task.connect(settings.dataset_args, name="DatasetArgs")
+        task.connect(settings.data_splitter_args, name="DataSplitterArgs")
+        task.connect(settings.sequence_args, name="SequenceArgs")
+        task.connect(settings.model_args, name="ModelArgs")
 
     # Create simulations directory
     if not os.path.exists(settings.simulation_folder):
@@ -310,6 +313,9 @@ def test(settings,
     dataset = initialize_dataset(settings, dataset, logger)
     data_splitter = initialize_data_splitter(settings, logger)
 
+    # TODO: initialize data splitter in initialization method
+    data_splitter.initialize(run_mode=RunMode.TEST)
+
     if settings.test_simulation:  # Set test data that were generated during inference
         test_dataset_files = [os.path.join(settings.simulation_folder, str(fold), data_splitter.test_df_file_name) for fold in settings.training_folds]
         data_splitter.test_df_list = [load_dataset_file(test_dataset_file) for test_dataset_file in test_dataset_files]
@@ -441,9 +447,9 @@ def inference(settings,
 
     model.load_model()
 
-    for batch_idx in range(len(inference_df)):
+    for batch_idx in range(len(inference_df_list)):
 
-        inference_data = dataset.get_data_batch(batch_df=inference_df[batch_idx],
+        inference_data = dataset.get_data_batch(batch_df=inference_df_list[batch_idx],
                                                 get_data=True,
                                                 get_label=False,
                                                 augment=False,
@@ -452,7 +458,7 @@ def inference(settings,
 
         original_inference_data = None
         if settings.inference_args["get_original_inference_data"]:
-            original_inference_data = dataset.get_data_batch(batch_df=inference_df[batch_idx],
+            original_inference_data = dataset.get_data_batch(batch_df=inference_df_list[batch_idx],
                                                              get_data=True,
                                                              get_label=False,
                                                              augment=False,
@@ -465,7 +471,7 @@ def inference(settings,
         postprocessed_batch_predictions = dataset.apply_postprocessing_on_predictions_batch(predictions=batch_predictions,
                                                                                             preprocessed_data_and_labels=inference_data,
                                                                                             not_preprocessed_data_and_labels=original_inference_data,
-                                                                                            batch_df=inference_df[batch_idx],
+                                                                                            batch_df=inference_df_list[batch_idx],
                                                                                             batch_id=batch_idx,
                                                                                             run_mode=RunMode.INFERENCE)
 
@@ -478,5 +484,5 @@ def inference(settings,
                                     not_postprocessed_predictions=batch_predictions,
                                     preprocessed_data_and_labels=inference_data,
                                     not_preprocessed_data_and_labels=original_inference_data,
-                                    batch_df=inference_df[batch_idx],
+                                    batch_df=inference_df_list[batch_idx],
                                     batch_id=batch_idx)
