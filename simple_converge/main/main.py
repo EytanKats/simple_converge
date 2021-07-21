@@ -132,10 +132,13 @@ def train(settings,
     task = None
     if settings.clear_ml:
         task = Task.init(project_name=settings.clear_ml_project_name,
-                         task_name=settings.clear_ml_task_name + "_" + str(np.random.randint(100)),
+                         task_name=settings.clear_ml_task_name,
                          auto_connect_frameworks=settings.clear_ml_connect_frameworks)
 
-        task.connect(settings.sequence_args)
+        task.connect(settings.dataset_args, name="DatasetArgs")
+        task.connect(settings.data_splitter_args, name="DataSplitterArgs")
+        task.connect(settings.sequence_args, name="SequenceArgs")
+        task.connect(settings.model_args, name="ModelArgs")
 
     # Create simulations directory
     if not os.path.exists(settings.simulation_folder):
