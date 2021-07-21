@@ -310,6 +310,9 @@ def test(settings,
     dataset = initialize_dataset(settings, dataset, logger)
     data_splitter = initialize_data_splitter(settings, logger)
 
+    # TODO: initialize data splitter in initialization method
+    data_splitter.initialize(run_mode=RunMode.TEST)
+
     if settings.test_simulation:  # Set test data that were generated during inference
         test_dataset_files = [os.path.join(settings.simulation_folder, str(fold), data_splitter.test_df_file_name) for fold in settings.training_folds]
         data_splitter.test_df_list = [load_dataset_file(test_dataset_file) for test_dataset_file in test_dataset_files]
