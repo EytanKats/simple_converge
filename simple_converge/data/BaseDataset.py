@@ -40,11 +40,13 @@ class BaseDataset(BaseObject):
     @abc.abstractmethod
     def get_data(self,
                  df_row,
+                 current_epoch_num=0,
                  run_mode=RunMode.TRAINING):
 
         """
         This method loads data
         :param df_row: row in the dataset dataframe that describes data sample
+        :param current_epoch_num: current epoch num during training, default is '0'
         :param run_mode: enumeration that specifies execution mode - training, validation, test or inference
         :return: single data sample
         """
@@ -54,11 +56,13 @@ class BaseDataset(BaseObject):
     @abc.abstractmethod
     def get_label(self,
                   df_row,
+                  current_epoch_num=0,
                   run_mode=RunMode.TRAINING):
 
         """
         This method loads ground truth label
         :param df_row: row in the dataset dataframe that describes data sample
+        :param current_epoch_num: current epoch num during training, default is '0'
         :param run_mode: enumeration that specifies execution mode - training, validation, test or inference
         :return: single ground truth label
         """
@@ -70,6 +74,7 @@ class BaseDataset(BaseObject):
                             data,
                             label=None,
                             info_row=None,
+                            current_epoch_num=0,
                             run_mode=RunMode.TRAINING):
 
         """
@@ -77,6 +82,7 @@ class BaseDataset(BaseObject):
         :param data: single data sample
         :param label: single ground truth label
         :param info_row: row in the dataset dataframe that describes data sample
+        :param current_epoch_num: current epoch num during training, default is '0'
         :param run_mode: enumeration that specifies execution mode - training, validation, test or inference
         :return: augmented data sample and corresponding augmented ground truth label
         """
@@ -88,6 +94,7 @@ class BaseDataset(BaseObject):
                             data,
                             label=None,
                             info_row=None,
+                            current_epoch_num=0,
                             run_mode=RunMode.TRAINING):
 
         """
@@ -95,6 +102,7 @@ class BaseDataset(BaseObject):
         :param data: single data sample
         :param label: single ground truth label
         :param info_row: row in the dataset dataframe that describes data sample
+        :param current_epoch_num: current epoch num during training, default is '0'
         :param run_mode: enumeration that specifies execution mode - training, validation, test or inference
         :return: preprocessed data sample and corresponding preprocessed ground truth label
         """
@@ -107,6 +115,7 @@ class BaseDataset(BaseObject):
                         get_label=False,
                         augment=False,
                         preprocess=False,
+                        current_epoch_num=0,
                         run_mode=RunMode.TRAINING):
 
         """
@@ -116,6 +125,7 @@ class BaseDataset(BaseObject):
         :param get_label: boolean flag; if True label is loaded
         :param augment: boolean flag; if True data and label are augmented
         :param preprocess: boolean flag; if True data and label are preprocessed
+        :param current_epoch_num: current epoch num during training, default is '0'
         :param run_mode: enumeration that specifies execution mode - training, validation, test or inference
         :return: data sample and corresponding ground truth label
         """
@@ -124,16 +134,16 @@ class BaseDataset(BaseObject):
         label = None
 
         if get_data:
-            data = self.get_data(df_row, run_mode)
+            data = self.get_data(df_row, current_epoch_num, run_mode)
 
         if get_label:
-            label = self.get_label(df_row, run_mode)
+            label = self.get_label(df_row, current_epoch_num, run_mode)
 
         if augment:
-            data, label = self.apply_augmentations(data, label, df_row, run_mode)
+            data, label = self.apply_augmentations(data, label, df_row, current_epoch_num, run_mode)
 
         if preprocess:
-            data, label = self.apply_preprocessing(data, label, df_row, run_mode)
+            data, label = self.apply_preprocessing(data, label, df_row, current_epoch_num, run_mode)
 
         return data, label
 
