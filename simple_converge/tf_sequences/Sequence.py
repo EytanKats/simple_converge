@@ -37,6 +37,7 @@ class Sequence(tf.keras.utils.Sequence, BaseObject):
         self.oversampling_column = ""
 
         # Fields to be filled during execution
+        self.current_epoch_num = 0
         self.dataset = None
         self.dataset_df = None
 
@@ -90,6 +91,8 @@ class Sequence(tf.keras.utils.Sequence, BaseObject):
         Have to be called before first use
         :return: None
         """
+
+        self.current_epoch_num = 0
 
         if self.oversample:
             self.dataset_df = self.oversample_data(self.dataset_df)
@@ -151,7 +154,8 @@ class Sequence(tf.keras.utils.Sequence, BaseObject):
                                                        get_data=True,
                                                        get_label=True,
                                                        augment=augment,
-                                                       preprocess=True)
+                                                       preprocess=True,
+                                                       current_epoch_num=self.current_epoch_num)
 
             inputs.append(data)
             labels.append(label)
@@ -190,6 +194,8 @@ class Sequence(tf.keras.utils.Sequence, BaseObject):
         This method permutes the dataset on the end of each epoch
         :return: None
         """
+
+        self.current_epoch_num += 1
 
         if self.oversample:
             dataset_df = self.oversample_data(self.dataset_df)
