@@ -245,7 +245,7 @@ class DatasetSplitter(BaseObject):
 
         # Get unique values for dataset leave-out column
         unique_values = self.dataset_df[self.leave_out_column].unique()
-        self.logger.log("Group values are: {0}".format(unique_values))
+        self.logger.log("Unique values for column {0} are: {1}".format(self.leave_out_column, unique_values))
 
         # Check that number of unique leave-out values are greater or equal to number of folds
         if len(unique_values) < self.folds_num:
