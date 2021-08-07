@@ -29,8 +29,8 @@ from simple_converge.tf_regularizers.regularizers_collection import regularizers
 class Manager(BaseObject):
 
     """
-    This class prepares building blocks of DL flow (logger, dataset, model, etc.) and
-    manages flow of training / testing / inference process.
+    This class instantiates and connects building blocks of pipeline (logger, dataset, model, etc.) and
+    manages training / testing / inference flow.
     Main responsibilities of this class:
     -
     """
@@ -44,6 +44,15 @@ class Manager(BaseObject):
 
         super(Manager, self).__init__()
 
+        # Fields to be filled by parsing
+
+        # Fields to be filled during execution
+        self.dataset = None
+        self.logger = None
+
+    def set_dataset(self, dataset):
+        self.dataset = dataset
+
     def parse_args(self, **kwargs):
 
         """
@@ -56,30 +65,26 @@ class Manager(BaseObject):
 
     def initialize_logger(self, settings):
 
-        logger = Logger()
-        logger.parse_args(params=settings.logger_args)
-        logger.start(settings.simulation_folder)
-        logger.log(settings.log_message)
-        return logger
+        self.logger = Logger()
+        self.logger.parse_args(params=settings.logger_args)
+        self.logger.start(settings.simulation_folder)
+        self.logger.log(settings.log_message)
 
-    def initialize_dataset(self, settings, dataset, logger):
+    def initialize_dataset(self, settings):
 
-        dataset.parse_args(params=settings.dataset_args)
-        dataset.set_logger(logger)
+        self.dataset.parse_args(params=settings.dataset_args)
+        self.dataset.set_logger(self.logger)
 
-        return dataset
-
-    def initialize_data_splitter(self, settings, logger):
+    def initialize_data_splitter(self, settings):
 
         dataset_splitter = DatasetSplitter()
         dataset_splitter.parse_args(params=settings.data_splitter_args)
-        dataset_splitter.set_logger(logger)
+        dataset_splitter.set_logger(self.logger)
 
         return dataset_splitter
 
     def initialize_model(self,
                          settings,
-                         logger,
                          custom_models_collection=None,
                          custom_metrics_collection=None,
                          custom_callbacks_collection=None,
@@ -98,7 +103,7 @@ class Manager(BaseObject):
         model = model_fn()
 
         model.parse_args(params=settings.model_args)
-        model.set_logger(logger)
+        model.set_logger(self.logger)
 
         if custom_metrics_collection is not None:
             sc_metrics_collection.update(custom_metrics_collection)
@@ -126,13 +131,13 @@ class Manager(BaseObject):
 
         return model
 
-    def initialize_sequence(self, settings, logger, dataset_df, dataset):
+    def initialize_sequence(self, settings, dataset_df):
 
         sequence = Sequence()
         sequence.parse_args(params=settings.sequence_args)
-        sequence.set_logger(logger)
+        sequence.set_logger(self.logger)
         sequence.set_dataset_df(dataset_df)
-        sequence.set_dataset(dataset)
+        sequence.set_dataset(self.dataset)
 
         sequence.initialize()
 
@@ -140,7 +145,6 @@ class Manager(BaseObject):
 
     def train(self,
               settings,
-              dataset,
               custom_models_collection=None,
               custom_metrics_collection=None,
               custom_callbacks_collection=None,
@@ -169,9 +173,9 @@ class Manager(BaseObject):
                         os.path.join(settings.simulation_folder, os.path.basename(settings.settings_file_name)))
 
         # Initialize logger, dataset and data splitter
-        logger = self.initialize_logger(settings)
-        dataset = self.initialize_dataset(settings, dataset, logger)  # TODO: add initialize method to dataset
-        data_splitter = self.initialize_data_splitter(settings, logger)
+        self.initialize_logger(settings)
+        self.initialize_dataset(settings)  # TODO: add initialize method to dataset
+        data_splitter = self.initialize_data_splitter(settings)
 
         # Split dataset to folds and farther to training, validation and test partitions
         # TODO: Set data or initialize and split it, and do it in a right place (initialization method)
@@ -181,7 +185,7 @@ class Manager(BaseObject):
         # Train model for each fold
         for fold in settings.training_folds:
 
-            logger.log("Training model for fold: {0}".format(fold))
+            self.logger.log("Training model for fold: {0}".format(fold))
 
             # Update simulation directory for current fold
             fold_simulation_folder = os.path.join(settings.simulation_folder, str(fold))
@@ -211,13 +215,13 @@ class Manager(BaseObject):
 
             # Initialize training and validation sequences for current fold
             # TODO divide sequence settings to 'training' sequence settings and 'validation' sequence settings
-            train_sequence = self.initialize_sequence(settings, logger, data_splitter.train_df_list[fold], dataset)
+            train_sequence = self.initialize_sequence(settings, data_splitter.train_df_list[fold])
 
             # Balance dataset during validation by oversampling to get more insightful metrics (not sure that it's a right decision)
             if settings.sequence_args["subsample"]:
                 settings.sequence_args["oversample"] = True
                 settings.sequence_args["subsample"] = False
-            val_sequence = self.initialize_sequence(settings, logger, data_splitter.val_df_list[fold], dataset)
+            val_sequence = self.initialize_sequence(settings, data_splitter.val_df_list[fold])
 
             # Build model
             # TODO check loading model and its compilation
@@ -226,7 +230,6 @@ class Manager(BaseObject):
                 temp_model_name = settings.model_args["model_name"]  # workaround to support secondary model initialization during saving (need to be initialized with original settings)
                 settings.model_args["model_name"] = "base_model"  # change settings to load base model
                 model = self.initialize_model(settings,
-                                              logger,
                                               custom_metrics_collection,
                                               custom_callbacks_collection,
                                               custom_optimizers_collection,
@@ -240,7 +243,6 @@ class Manager(BaseObject):
 
             else:
                 model = self.initialize_model(settings,
-                                              logger,
                                               custom_models_collection,
                                               custom_metrics_collection,
                                               custom_callbacks_collection,
@@ -255,7 +257,6 @@ class Manager(BaseObject):
 
             # Load best weights from checkpoint and save model in 'SavedModel' format
             model = self.initialize_model(settings,  # workaround to save model without compiling
-                                          logger,
                                           custom_models_collection)
 
             model.load_weights()
@@ -272,55 +273,55 @@ class Manager(BaseObject):
                                            clear_ml_task=task)
 
             # Get test data
-            test_data = dataset.get_data_batch(batch_df=data_splitter.test_df_list[fold],
-                                               get_data=True,
-                                               get_label=True,
-                                               augment=False,
-                                               preprocess=True,
-                                               run_mode=RunMode.TEST)
+            test_data = self.dataset.get_data_batch(batch_df=data_splitter.test_df_list[fold],
+                                                    get_data=True,
+                                                    get_label=True,
+                                                    augment=False,
+                                                    preprocess=True,
+                                                    run_mode=RunMode.TEST)
 
             original_test_data = None
             if settings.get_original_data:
-                original_test_data = dataset.get_data_batch(batch_df=data_splitter.test_df_list[fold],
-                                                            get_data=True,
-                                                            get_label=True,
-                                                            augment=False,
-                                                            preprocess=False,
-                                                            run_mode=RunMode.TEST)
+                original_test_data = self.dataset.get_data_batch(batch_df=data_splitter.test_df_list[fold],
+                                                                 get_data=True,
+                                                                 get_label=True,
+                                                                 augment=False,
+                                                                 preprocess=False,
+                                                                 run_mode=RunMode.TEST)
 
             # Calculate predictions
             test_predictions = model.predict(test_data[0])
 
             # Apply postprocessing
-            postprocessed_test_predictions = dataset.apply_postprocessing_on_predictions_batch(predictions=test_predictions,
-                                                                                               preprocessed_data_and_labels=test_data,
-                                                                                               not_preprocessed_data_and_labels=original_test_data,
-                                                                                               batch_df=data_splitter.test_df_list[fold],
-                                                                                               batch_id=fold,
-                                                                                               run_mode=RunMode.TEST)
+            postprocessed_test_predictions = self.dataset.apply_postprocessing_on_predictions_batch(predictions=test_predictions,
+                                                                                                    preprocessed_data_and_labels=test_data,
+                                                                                                    not_preprocessed_data_and_labels=original_test_data,
+                                                                                                    batch_df=data_splitter.test_df_list[fold],
+                                                                                                    batch_id=fold,
+                                                                                                    run_mode=RunMode.TEST)
 
             # Calculate metrics
-            dataset.calculate_batch_metrics(postprocessed_predictions=postprocessed_test_predictions,
-                                            preprocessed_data_and_labels=test_data,
-                                            not_preprocessed_data_and_labels=original_test_data,
-                                            batch_df=data_splitter.test_df_list[fold],
-                                            batch_id=fold,
-                                            output_dir=fold_simulation_folder)
+            self.dataset.calculate_batch_metrics(postprocessed_predictions=postprocessed_test_predictions,
+                                                 preprocessed_data_and_labels=test_data,
+                                                 not_preprocessed_data_and_labels=original_test_data,
+                                                 batch_df=data_splitter.test_df_list[fold],
+                                                 batch_id=fold,
+                                                 output_dir=fold_simulation_folder)
 
             # Save tested data
             if settings.save_test_data:
-                dataset.save_data_batch(postprocessed_predictions=postprocessed_test_predictions,
-                                        output_dir=fold_simulation_folder,
-                                        not_postprocessed_predictions=test_predictions,
-                                        preprocessed_data_and_labels=test_data,
-                                        not_preprocessed_data_and_labels=original_test_data,
-                                        batch_df=data_splitter.test_df_list[fold],
-                                        batch_id=fold)
+                self.dataset.save_data_batch(postprocessed_predictions=postprocessed_test_predictions,
+                                             output_dir=fold_simulation_folder,
+                                             not_postprocessed_predictions=test_predictions,
+                                             preprocessed_data_and_labels=test_data,
+                                             not_preprocessed_data_and_labels=original_test_data,
+                                             batch_df=data_splitter.test_df_list[fold],
+                                             batch_id=fold)
 
-        dataset.aggregate_metrics_for_all_batches(settings.simulation_folder)
-        logger.end()
+        self.dataset.aggregate_metrics_for_all_batches(settings.simulation_folder)
+        self.logger.end()
 
-    def test(self, settings, dataset):
+    def test(self, settings):
 
         # Create simulations directory
         if not os.path.exists(settings.simulation_folder):
@@ -331,9 +332,9 @@ class Manager(BaseObject):
                         os.path.join(settings.simulation_folder, os.path.basename(settings.settings_file_name)))
 
         # Initialize logger, dataset and generator
-        logger = self.initialize_logger(settings)
-        dataset = self.initialize_dataset(settings, dataset, logger)
-        data_splitter = self.initialize_data_splitter(settings, logger)
+        self.initialize_logger(settings)
+        self.initialize_dataset(settings)
+        data_splitter = self.initialize_data_splitter(settings)
 
         # TODO: initialize data splitter in initialization method
         data_splitter.initialize(run_mode=RunMode.TEST)
@@ -351,8 +352,8 @@ class Manager(BaseObject):
         # Test model for each fold
         for fold_idx, fold in enumerate(settings.training_folds):
 
-            logger.log("Test model for fold: {0}".format(fold))
-            logger.log("Number of samples to test: {0}".format(data_splitter.test_df_list[fold_idx].shape[0]))
+            self.logger.log("Test model for fold: {0}".format(fold))
+            self.logger.log("Number of samples to test: {0}".format(data_splitter.test_df_list[fold_idx].shape[0]))
 
             # Update simulation directory for current fold
             fold_simulation_folder = os.path.join(settings.simulation_folder, str(fold))
@@ -375,60 +376,60 @@ class Manager(BaseObject):
 
             # Build model
             settings.model_args["model_name"] = "base_model"  # change settings to initialize base model
-            model = self.initialize_model(settings, logger)
+            model = self.initialize_model(settings)
             model.load_model()
 
             # Get test data
             # TODO split test data to batches
-            test_data = dataset.get_data_batch(batch_df=data_splitter.test_df_list[fold],
-                                               get_data=True,
-                                               get_label=True,
-                                               augment=False,
-                                               preprocess=True,
-                                               run_mode=RunMode.TEST)
+            test_data = self.dataset.get_data_batch(batch_df=data_splitter.test_df_list[fold],
+                                                    get_data=True,
+                                                    get_label=True,
+                                                    augment=False,
+                                                    preprocess=True,
+                                                    run_mode=RunMode.TEST)
 
             original_test_data = None
             if settings.get_original_data:
-                original_test_data = dataset.get_data_batch(batch_df=data_splitter.test_df_list[fold],
-                                                            get_data=True,
-                                                            get_label=True,
-                                                            augment=False,
-                                                            preprocess=False,
-                                                            run_mode=RunMode.TEST)
+                original_test_data = self.dataset.get_data_batch(batch_df=data_splitter.test_df_list[fold],
+                                                                 get_data=True,
+                                                                 get_label=True,
+                                                                 augment=False,
+                                                                 preprocess=False,
+                                                                 run_mode=RunMode.TEST)
 
             # Calculate predictions
             test_predictions = model.predict(test_data[0])
 
             # Apply postprocessing
-            postprocessed_test_predictions = dataset.apply_postprocessing_on_predictions_batch(predictions=test_predictions,
-                                                                                               preprocessed_data_and_labels=test_data,
-                                                                                               not_preprocessed_data_and_labels=original_test_data,
-                                                                                               batch_df=data_splitter.test_df_list[fold],
-                                                                                               batch_id=fold,
-                                                                                               run_mode=RunMode.TEST)
+            postprocessed_test_predictions = self.dataset.apply_postprocessing_on_predictions_batch(predictions=test_predictions,
+                                                                                                    preprocessed_data_and_labels=test_data,
+                                                                                                    not_preprocessed_data_and_labels=original_test_data,
+                                                                                                    batch_df=data_splitter.test_df_list[fold],
+                                                                                                    batch_id=fold,
+                                                                                                    run_mode=RunMode.TEST)
 
             # Calculate metrics
-            dataset.calculate_batch_metrics(postprocessed_predictions=postprocessed_test_predictions,
-                                            preprocessed_data_and_labels=test_data,
-                                            not_preprocessed_data_and_labels=original_test_data,
-                                            batch_df=data_splitter.test_df_list[fold],
-                                            batch_id=fold,
-                                            output_dir=fold_simulation_folder)
+            self.dataset.calculate_batch_metrics(postprocessed_predictions=postprocessed_test_predictions,
+                                                 preprocessed_data_and_labels=test_data,
+                                                 not_preprocessed_data_and_labels=original_test_data,
+                                                 batch_df=data_splitter.test_df_list[fold],
+                                                 batch_id=fold,
+                                                 output_dir=fold_simulation_folder)
 
             # Save tested data
             if settings.save_test_data:
-                dataset.save_data_batch(postprocessed_predictions=postprocessed_test_predictions,
-                                        output_dir=fold_simulation_folder,
-                                        not_postprocessed_predictions=test_predictions,
-                                        preprocessed_data_and_labels=test_data,
-                                        not_preprocessed_data_and_labels=original_test_data,
-                                        batch_df=data_splitter.test_df_list[fold],
-                                        batch_id=fold)
+                self.dataset.save_data_batch(postprocessed_predictions=postprocessed_test_predictions,
+                                             output_dir=fold_simulation_folder,
+                                             not_postprocessed_predictions=test_predictions,
+                                             preprocessed_data_and_labels=test_data,
+                                             not_preprocessed_data_and_labels=original_test_data,
+                                             batch_df=data_splitter.test_df_list[fold],
+                                             batch_id=fold)
 
-        dataset.aggregate_metrics_for_all_batches(settings.simulation_folder)
-        logger.end()
+        self.dataset.aggregate_metrics_for_all_batches(settings.simulation_folder)
+        self.logger.end()
 
-    def inference(self, settings, dataset):
+    def inference(self, settings):
 
         # Create simulations directory
         if not os.path.exists(settings.simulation_folder):
@@ -453,8 +454,8 @@ class Manager(BaseObject):
             inference_df = load_dataset_file(settings.inference_args["inference_data_definition_file_path"])
 
         # Initialize logger, dataset and generator
-        logger = self.initialize_logger(settings)
-        dataset = self.initialize_dataset(settings, dataset, logger)
+        self.initialize_logger(settings)
+        self.initialize_dataset(settings)
 
         # Split inference data to batches
         inference_df_list = np.array_split(inference_df, settings.inference_args["inference_batch_size"])
@@ -468,46 +469,46 @@ class Manager(BaseObject):
 
         # Build model
         settings.model_args["model_name"] = "base_model"  # change settings to initialize base model
-        model = self.initialize_model(settings, logger)
+        model = self.initialize_model(settings)
 
         model.load_model()
 
         for batch_idx in range(len(inference_df_list)):
 
-            inference_data = dataset.get_data_batch(batch_df=inference_df_list[batch_idx],
-                                                    get_data=True,
-                                                    get_label=False,
-                                                    augment=False,
-                                                    preprocess=True,
-                                                    run_mode=RunMode.INFERENCE)
+            inference_data = self.dataset.get_data_batch(batch_df=inference_df_list[batch_idx],
+                                                         get_data=True,
+                                                         get_label=False,
+                                                         augment=False,
+                                                         preprocess=True,
+                                                         run_mode=RunMode.INFERENCE)
 
             original_inference_data = None
             if settings.inference_args["get_original_inference_data"]:
-                original_inference_data = dataset.get_data_batch(batch_df=inference_df_list[batch_idx],
-                                                                 get_data=True,
-                                                                 get_label=False,
-                                                                 augment=False,
-                                                                 preprocess=True,
-                                                                 run_mode=RunMode.INFERENCE)
+                original_inference_data = self.dataset.get_data_batch(batch_df=inference_df_list[batch_idx],
+                                                                      get_data=True,
+                                                                      get_label=False,
+                                                                      augment=False,
+                                                                      preprocess=True,
+                                                                      run_mode=RunMode.INFERENCE)
 
             batch_predictions = model.predict(inference_data[0])
 
             # Apply postprocessing
-            postprocessed_batch_predictions = dataset.apply_postprocessing_on_predictions_batch(predictions=batch_predictions,
-                                                                                                preprocessed_data_and_labels=inference_data,
-                                                                                                not_preprocessed_data_and_labels=original_inference_data,
-                                                                                                batch_df=inference_df_list[batch_idx],
-                                                                                                batch_id=batch_idx,
-                                                                                                run_mode=RunMode.INFERENCE)
+            postprocessed_batch_predictions = self.dataset.apply_postprocessing_on_predictions_batch(predictions=batch_predictions,
+                                                                                                     preprocessed_data_and_labels=inference_data,
+                                                                                                     not_preprocessed_data_and_labels=original_inference_data,
+                                                                                                     batch_df=inference_df_list[batch_idx],
+                                                                                                     batch_id=batch_idx,
+                                                                                                     run_mode=RunMode.INFERENCE)
 
             # Save tested data
             # TODO add to 'save_data_batch_method' 'run_mode' argument
             # TODO add 'settings.inference_args["inference_simulation_folder"]' settings entry
             if settings.inference_args["save_inference_data"]:
-                dataset.save_data_batch(postprocessed_predictions=postprocessed_batch_predictions,
-                                        output_dir=settings.simulation_folder,
-                                        not_postprocessed_predictions=batch_predictions,
-                                        preprocessed_data_and_labels=inference_data,
-                                        not_preprocessed_data_and_labels=original_inference_data,
-                                        batch_df=inference_df_list[batch_idx],
-                                        batch_id=batch_idx)
+                self.dataset.save_data_batch(postprocessed_predictions=postprocessed_batch_predictions,
+                                             output_dir=settings.simulation_folder,
+                                             not_postprocessed_predictions=batch_predictions,
+                                             preprocessed_data_and_labels=inference_data,
+                                             not_preprocessed_data_and_labels=original_inference_data,
+                                             batch_df=inference_df_list[batch_idx],
+                                             batch_id=batch_idx)
