@@ -11,7 +11,6 @@ import pandas as pd
 from clearml import Task
 
 from simple_converge.utils.RunMode import RunMode
-from simple_converge.base.BaseObject import BaseObject
 from simple_converge.utils.dataset_utils import load_dataset_file
 from simple_converge.utils import plots_matplotlib
 
@@ -26,7 +25,7 @@ from simple_converge.tf_optimizers.optimizers_collection import optimizers_colle
 from simple_converge.tf_regularizers.regularizers_collection import regularizers_collection as sc_regularizers_collection
 
 
-class Manager(BaseObject):
+class Manager(object):
 
     """
     This class instantiates and connects building blocks of pipeline (logger, dataset, model, etc.) and
@@ -35,101 +34,65 @@ class Manager(BaseObject):
     -
     """
 
-    def __init__(self):
+    def __init__(self, settings, dataset):
 
         """
         This method initializes parameters
         :return: None
         """
 
-        super(Manager, self).__init__()
-
-        # Fields to be filled by parsing
-
-        # Fields to be filled during execution
-        self.dataset = None
-        self.logger = None
-
-    def set_dataset(self, dataset):
+        self.settings = settings
         self.dataset = dataset
 
-    def parse_args(self, **kwargs):
+        self.collection = dict()
+        self.collection["models"] = sc_models_collection
+        self.collection["metrics"] = sc_metrics_collection
+        self.collection["callbacks"] = sc_callbacks_collection
+        self.collection["optimizers"] = sc_optimizers_collection
+        self.collection["regularizers"] = sc_regularizers_collection
 
-        """
-        This method sets values of parameters that exist in kwargs
-        :param kwargs: dictionary that contains values of parameters to be set
-        :return: None
-        """
+        self.logger = None
+        self.dataset_splitter = None
+        self.model = None
 
-        super(Manager, self).parse_args(**kwargs)
+    def update_collection(self, collection_id, custom_collection):
 
-    def initialize_logger(self, settings):
+        if custom_collection is not None:
+            self.collection[collection_id].update(custom_collection)
+
+    def initialize_logger(self):
 
         self.logger = Logger()
-        self.logger.parse_args(params=settings.logger_args)
-        self.logger.start(settings.simulation_folder)
-        self.logger.log(settings.log_message)
+        self.logger.parse_args(params=self.settings.logger_args)
 
-    def initialize_dataset(self, settings):
+    def initialize_dataset(self):
 
-        self.dataset.parse_args(params=settings.dataset_args)
+        self.dataset.parse_args(params=self.settings.dataset_args)
         self.dataset.set_logger(self.logger)
 
-    def initialize_data_splitter(self, settings):
+    def initialize_data_splitter(self):
 
-        dataset_splitter = DatasetSplitter()
-        dataset_splitter.parse_args(params=settings.data_splitter_args)
-        dataset_splitter.set_logger(self.logger)
+        self.dataset_splitter = DatasetSplitter()
+        self.dataset_splitter.parse_args(params=self.settings.data_splitter_args)
+        self.dataset_splitter.set_logger(self.logger)
 
-        return dataset_splitter
+    def initialize_model(self, train_sequence=None, val_sequence=None):
 
-    def initialize_model(self,
-                         settings,
-                         custom_models_collection=None,
-                         custom_metrics_collection=None,
-                         custom_callbacks_collection=None,
-                         custom_optimizers_collection=None,
-                         custom_regularizers_collection=None,
-                         train_sequence=None,
-                         val_sequence=None):
+        # Get model from collection
+        model_name = self.settings.model_args["model_name"]
+        model_fn = self.collection["models"][model_name]
+        self.model = model_fn()
 
-        if custom_models_collection is not None:
-            models_collection = sc_models_collection.update(custom_models_collection)
-        else:
-            models_collection = sc_models_collection
-
-        model_name = settings.model_args["model_name"]
-        model_fn = models_collection[model_name]
-        model = model_fn()
-
-        model.parse_args(params=settings.model_args)
-        model.set_logger(self.logger)
-
-        if custom_metrics_collection is not None:
-            sc_metrics_collection.update(custom_metrics_collection)
-        model.set_metrics_collection(sc_metrics_collection)
-
-        if custom_callbacks_collection is not None:
-            sc_callbacks_collection.update(custom_callbacks_collection)
-        model.set_callbacks_collection(sc_callbacks_collection)
-
-        if custom_optimizers_collection is not None:
-            sc_optimizers_collection.update(custom_optimizers_collection)
-        model.set_optimizers_collection(sc_optimizers_collection)
-
-        if custom_regularizers_collection is not None:
-            sc_regularizers_collection.update(custom_regularizers_collection)
-        model.set_regularizers_collection(sc_regularizers_collection)
+        self.model.parse_args(params=self.settings.model_args)
+        self.model.set_logger(self.logger)
 
         if train_sequence is not None:
-            model.set_train_sequence(train_sequence)
+            self.model.set_train_sequence(train_sequence)
 
         if val_sequence is not None:
-            model.set_val_sequence(val_sequence)
+            self.model.set_val_sequence(val_sequence)
 
-        model.build()
-
-        return model
+        self.model.build()
 
     def initialize_sequence(self, settings, dataset_df):
 
@@ -171,6 +134,13 @@ class Manager(BaseObject):
         # Copy settings file to simulation directory
         shutil.copyfile(settings.settings_file_name,
                         os.path.join(settings.simulation_folder, os.path.basename(settings.settings_file_name)))
+
+        # Update collections
+        self.update_collection("models", custom_models_collection)
+        self.update_collection("metrics", custom_metrics_collection)
+        self.update_collection("callbacks", custom_callbacks_collection)
+        self.update_collection("optimizers", custom_optimizers_collection)
+        self.update_collection("regularizers", custom_regularizers_collection)
 
         # Initialize logger, dataset and data splitter
         self.initialize_logger(settings)
