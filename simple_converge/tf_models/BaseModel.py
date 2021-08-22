@@ -1,8 +1,10 @@
+import os
 import numpy as np
 import tensorflow as tf
 
-from simple_converge.base.BaseObject import BaseObject
 from simple_converge.logs.LogLevels import LogLevels
+from simple_converge.base.BaseObject import BaseObject
+from simple_converge.tf_sequences.Sequence import Sequence
 
 
 class BaseModel(BaseObject):
@@ -21,22 +23,20 @@ class BaseModel(BaseObject):
         super(BaseModel, self).__init__()
 
         # Fields to be filled by parsing
-        self.load_weights_path = ""
-        self.save_weights_path = ""
-
-        self.load_model_path = ""
-        self.save_model_path = ""
-
-        self.kernel_initializer = "he_normal"
+        self.start_point_model = False
+        self.start_point_model_path = ""
+        self.compile_start_point_model = False
 
         self.regularizer_args = None
         self.loss_args = None
         self.optimizer_args = None
         self.metrics_args = None
+        self.callbacks_args = None
+        self.train_sequence_args = None
+        self.val_sequence_args = None
 
         self.epochs = None
         self.val_steps = None
-        self.callbacks_args = None
 
         self.prediction_batch_size = None
 
@@ -60,20 +60,14 @@ class BaseModel(BaseObject):
 
         super(BaseModel, self).parse_args(**kwargs)
 
-        if "load_weights_path" in self.params.keys():
-            self.load_weights_path = self.params["load_weights_path"]
+        if "start_point_model" in self.params.keys():
+            self.start_point_model = self.params["start_point_model"]
 
-        if "save_weights_path" in self.params.keys():
-            self.save_weights_path = self.params["save_weights_path"]
+        if "start_point_model_path" in self.params.keys():
+            self.start_point_model_path = self.params["start_point_model_path"]
 
-        if "load_model_path" in self.params.keys():
-            self.load_model_path = self.params["load_model_path"]
-
-        if "save_model_path" in self.params.keys():
-            self.save_model_path = self.params["save_model_path"]
-
-        if "kernel_initializer" in self.params.keys():
-            self.kernel_initializer = self.params["kernel_initializer"]
+        if "compile_start_point_model" in self.params.keys():
+            self.compile_start_point_model = self.params["compile_start_point_model"]
 
         if "regularizer_args" in self.params.keys():
             self.regularizer_args = self.params["regularizer_args"]
@@ -87,11 +81,17 @@ class BaseModel(BaseObject):
         if "metrics_args" in self.params.keys():
             self.metrics_args = self.params["metrics_args"]
 
-        if "epochs" in self.params.keys():
-            self.epochs = self.params["epochs"]
-
         if "callbacks_args" in self.params.keys():
             self.callbacks_args = self.params["callbacks_args"]
+
+        if "train_sequence_args" in self.params.keys():
+            self.train_sequence_args = self.params["train_sequence_args"]
+
+        if "val_sequence_args" in self.params.keys():
+            self.val_sequence_args = self.params["val_sequence_args"]
+
+        if "epochs" in self.params.keys():
+            self.epochs = self.params["epochs"]
 
         if "prediction_batch_size" in self.params.keys():
             self.prediction_batch_size = self.params["prediction_batch_size"]
@@ -136,40 +136,71 @@ class BaseModel(BaseObject):
 
         self.regularizers_collection = regularizers_collection
 
-    def set_train_sequence(self, train_sequence):
+    def create_sequence(self, sequence_args, dataframe, dataset):
 
         """
-        This method sets training data sequence that will be used in fit method
-        :param train_sequence: training data sequence
+        This method initializes data sequence that will be used in fit method
+        :param sequence_args: dictionary that contains settings of sequence
+        :param dataframe: dataframe that contains data information
+        :param dataset: instance of 'Dataset' class
+        :return: instance of 'Sequence' class
+        """
+
+        sequence = Sequence()
+        sequence.parse_args(params=sequence_args)
+        sequence.set_logger(self.logger)
+        sequence.set_dataset_df(dataframe)
+        sequence.set_dataset(dataset)
+
+        sequence.initialize()
+        return sequence
+
+    def create_train_sequence(self, dataframe, dataset):
+
+        """
+        This method initializes training data sequence that will be used in fit method
+        :param dataframe: dataframe that contains training data information
+        :param dataset: instance of 'Dataset' class
         :return: None
         """
 
-        self.train_sequence = train_sequence
+        self.train_sequence = self.create_sequence(self.train_sequence_args, dataframe, dataset)
 
-    def set_val_sequence(self, val_sequence):
+    def create_val_sequence(self, dataframe, dataset):
 
         """
-        This method sets validation data sequence that will be used in fit method
-        :param val_sequence: validation data sequence
+        This method initializes validation data sequence that will be used in fit method
+        :param dataframe: dataframe that contains validation data information
+        :param dataset: instance of 'Dataset' class
         :return: None
         """
 
-        self.val_sequence = val_sequence
+        self.val_sequence = self.create_sequence(self.val_sequence_args, dataframe, dataset)
+
+    def update_paths(self, output_folder):
+
+        """
+        This method updates parameters that dependent on output_folder
+        :param output_folder: folder to save training artifacts
+        :return: None
+        """
+
+        for callback_args in self.callbacks_args:
+
+            if callback_args["callback_name"] == "checkpoint_callback":
+                callback_args["checkpoint_path"] = os.path.join(output_folder, callback_args["output_model_name"])
+
+            if callback_args["callback_name"] == "csv_logger_callback":
+                callback_args["training_log_path"] = os.path.join(output_folder, callback_args["training_log_name"])
+
+            if callback_args["callback_name"] == "tensorboard":
+                callback_args["log_dir"] = os.path.join(output_folder, callback_args["log_dir_name"])
 
     def build(self):
         pass
 
-    def load_weights(self):
-        self.model.load_weights(self.load_weights_path)
-
-    def save_weights(self):
-        self.model.save_weights(self.save_weights_path)
-
-    def save_model(self):
-        self.model.save(self.save_model_path)
-
-    def load_model(self):
-        self.model = tf.keras.models.load_model(self.load_model_path)
+    def load_model(self, model_path):
+        self.model = tf.keras.models.load_model(model_path)
 
     def _get_regularizer(self):
 
