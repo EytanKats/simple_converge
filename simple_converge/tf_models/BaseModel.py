@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import tensorflow as tf
 
@@ -177,30 +176,17 @@ class BaseModel(BaseObject):
 
         self.val_sequence = self.create_sequence(self.val_sequence_args, dataframe, dataset)
 
-    def update_paths(self, output_folder):
-
-        """
-        This method updates parameters that dependent on output_folder
-        :param output_folder: folder to save training artifacts
-        :return: None
-        """
-
-        for callback_args in self.callbacks_args:
-
-            if callback_args["callback_name"] == "checkpoint_callback":
-                callback_args["checkpoint_path"] = os.path.join(output_folder, callback_args["output_model_name"])
-
-            if callback_args["callback_name"] == "csv_logger_callback":
-                callback_args["training_log_path"] = os.path.join(output_folder, callback_args["training_log_name"])
-
-            if callback_args["callback_name"] == "tensorboard":
-                callback_args["log_dir"] = os.path.join(output_folder, callback_args["log_dir_name"])
-
     def build(self):
         pass
 
+    def load_weights(self, weights_path):
+        self.model.load_weights(weights_path)
+
     def load_model(self, model_path):
         self.model = tf.keras.models.load_model(model_path)
+
+    def save_model(self, model_path):
+        self.model.save(model_path)
 
     def _get_regularizer(self):
 
