@@ -48,10 +48,6 @@ class DatasetSplitter(BaseObject):
         self.val_df_file_name = "val_df.csv"
         self.test_df_file_name = "test_df.csv"
 
-        self.custom_train_csv_list = list()
-        self.custom_val_csv_list = list()
-        self.custom_test_csv_list = list()
-
         # Fields to be filled during execution
         self.dataset_df = None
         self.groups_df_list = None
@@ -112,15 +108,6 @@ class DatasetSplitter(BaseObject):
         if "test_df_file_name" in self.params.keys():
             self.test_df_file_name = self.params["test_df_file_name"]
 
-        if "custom_train_csv_list" in self.params.keys():
-            self.custom_train_csv_list = self.params["custom_train_csv_list"]
-
-        if "custom_val_csv_list" in self.params.keys():
-            self.custom_val_csv_list = self.params["custom_val_csv_list"]
-
-        if "custom_test_csv_list" in self.params.keys():
-            self.custom_test_csv_list = self.params["custom_test_csv_list"]
-
     def load_dataset_file(self):
 
         """
@@ -177,7 +164,7 @@ class DatasetSplitter(BaseObject):
         self.test_df_list[fold_num] = test_df
         self.logger.log("Test dataframe with {0} entries is set for fold {1}".format(test_df.shape[0], fold_num))
 
-    def set_custom_data_split(self):
+    def set_custom_data_split(self, train_data_files, val_data_files, test_data_files):
 
         """
         This method sets training, validation and test dataframe lists according to custom lists of
@@ -187,14 +174,9 @@ class DatasetSplitter(BaseObject):
 
         self.logger.log("Loading custom lists of training validation and test files")
 
-        self.train_df_list = [dataset_utils.load_dataset_file(dataset_file)
-                              for dataset_file in self.custom_train_csv_list]
-
-        self.val_df_list = [dataset_utils.load_dataset_file(dataset_file)
-                            for dataset_file in self.custom_val_csv_list]
-
-        self.test_df_list = [dataset_utils.load_dataset_file(dataset_file)
-                             for dataset_file in self.custom_test_csv_list]
+        self.train_df_list = [dataset_utils.load_dataset_file(data_file) for data_file in train_data_files]
+        self.val_df_list = [dataset_utils.load_dataset_file(data_file) for data_file in val_data_files]
+        self.test_df_list = [dataset_utils.load_dataset_file(data_file) for data_file in test_data_files]
 
     def split_dataset(self):
 
