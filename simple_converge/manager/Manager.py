@@ -88,7 +88,7 @@ class Manager(object):
                                task_name=self.settings.mlops_args["task_name"],
                                auto_connect_frameworks=self.settings.mlops_args["connect_frameworks"])
 
-        self.settings.log_settings(self, task=mlops_task, output_folder=self.settings.manager_args["output_folder"])
+        self.settings.log_settings(task=mlops_task, output_folder=self.settings.manager_args["output_folder"])
 
         return mlops_task
 
@@ -142,7 +142,7 @@ class Manager(object):
 
         # Split data to batches
         if split_to_batches:
-            batch_df_list = np.array_split(fold_df, batch_size)
+            batch_df_list = np.array_split(fold_df, fold_df.shape[0] // batch_size)
         else:
             batch_df_list = [fold_df]
 
@@ -151,7 +151,7 @@ class Manager(object):
             # Get test data
             test_data = self.dataset.get_data_batch(batch_df=batch_df,
                                                     get_data=True,
-                                                    get_label=True,
+                                                    get_label=evaluate,
                                                     augment=False,
                                                     preprocess=True,
                                                     run_mode=run_mode)
@@ -160,7 +160,7 @@ class Manager(object):
             if get_original_data:
                 original_test_data = self.dataset.get_data_batch(batch_df=batch_df,
                                                                  get_data=True,
-                                                                 get_label=True,
+                                                                 get_label=evaluate,
                                                                  augment=False,
                                                                  preprocess=False,
                                                                  run_mode=run_mode)
@@ -174,7 +174,7 @@ class Manager(object):
                                                           preprocessed_data_and_labels=test_data,
                                                           not_preprocessed_data_and_labels=original_test_data,
                                                           batch_df=batch_df,
-                                                          batch_id=fold,
+                                                          fold=fold,
                                                           run_mode=RunMode.TEST)
 
             # Calculate metrics
@@ -183,7 +183,7 @@ class Manager(object):
                                                      preprocessed_data_and_labels=test_data,
                                                      not_preprocessed_data_and_labels=original_test_data,
                                                      batch_df=batch_df,
-                                                     batch_id=fold,
+                                                     fold=fold,
                                                      output_dir=fold_output_folder,
                                                      task=self.mlops_task)
 
@@ -195,7 +195,7 @@ class Manager(object):
                                              preprocessed_data_and_labels=test_data,
                                              not_preprocessed_data_and_labels=original_test_data,
                                              batch_df=batch_df,
-                                             batch_id=fold,
+                                             fold=fold,
                                              run_mode=run_mode,
                                              task=self.mlops_task)
 
@@ -277,16 +277,20 @@ class Manager(object):
             # TODO: upload model to dedicated storage and write it path to ClearML
 
             # Test model
-            self.predict_fold(fold, fold_output_folder,
-                              model, self.dataset_splitter.test_df_list[fold],
-                              split_to_batches=self.settings.manager_args["split_test_data_to_batches"],
-                              batch_size=self.settings.manager_args["test_batch_size"],
-                              get_original_data=self.settings.manager_args["get_original_data_during_test"],
-                              evaluate=True, save=self.settings.manager_args["save_test_data"],
-                              run_mode=RunMode.TEST)
+            if self.settings.manager_args["evaluate_at_the_end_of_training"]:
 
-        self.dataset.aggregate_predictions_for_all_folds(self.settings.manager_args["output_folder"],
-                                                         task=self.mlops_task)
+                self.predict_fold(fold, fold_output_folder,
+                                  model, self.dataset_splitter.test_df_list[fold],
+                                  split_to_batches=self.settings.manager_args["split_test_data_to_batches"],
+                                  batch_size=self.settings.manager_args["test_batch_size"],
+                                  get_original_data=self.settings.manager_args["get_original_data_during_test"],
+                                  evaluate=True,
+                                  save=self.settings.manager_args["save_test_data"],
+                                  run_mode=RunMode.TEST)
+
+        if self.settings.manager_args["evaluate_at_the_end_of_training"]:
+            self.dataset.aggregate_predictions_for_all_folds(self.settings.manager_args["output_folder"],
+                                                             task=self.mlops_task)
         self.logger.end()
 
     def evaluate(self):
@@ -299,11 +303,11 @@ class Manager(object):
 
             test_data_files_paths = [os.path.join(self.settings.manager_args["simulation_folder"],
                                                   str(fold), self.settings.data_splitter_args["test_df_file_name"])
-                                     for fold in self.settings.data_splitter_args["folds_num"]]
+                                     for fold in self.settings.manager_args["active_folds"]]
             test_data_files = [load_dataset_file(file_path) for file_path in test_data_files_paths]
 
-            models_paths = [os.path.join(self.settings.manager_args["simulation_folder"], str(fold), "model")
-                            for fold in self.settings.data_splitter_args["folds_num"]]
+            models_paths = [os.path.join(self.settings.manager_args["simulation_folder"], str(fold), "checkpoint", "weights")
+                            for fold in self.settings.manager_args["active_folds"]]
 
         else:
             self.logger.log(f'Loading custom test data files {self.settings.manager_args["test_data_files"]}')
@@ -325,8 +329,10 @@ class Manager(object):
             os.makedirs(fold_output_folder)
 
             # Load model
+            self.logger.log(f"Creating model and loading weights")
             model = self.create_model()
-            model.load_model(models_paths[fold_idx])
+            model.build()
+            model.load_weights(models_paths[fold_idx])
 
             # Evaluate
             self.predict_fold(fold, fold_output_folder,
@@ -358,8 +364,13 @@ class Manager(object):
             inference_df = load_dataset_file(self.settings.manager_args["inference_data_definition_file_path"])
 
         # Load model
+
+        # TODO: change loading weights to loading entire model (weights, architecture, training conditions), probably bug in TF
+
+        self.logger.log(f"Creating model and loading weights")
         model = self.create_model()
-        model.load_model(self.settings.manager_args["inference_model_path"])
+        model.build()
+        model.load_weights(self.settings.manager_args["inference_model_path"])
 
         self.predict_fold(0, self.settings.manager_args["output_folder"],
                           model, inference_df,
