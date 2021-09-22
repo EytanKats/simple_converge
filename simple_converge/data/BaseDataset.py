@@ -40,11 +40,13 @@ class BaseDataset(BaseObject):
     @abc.abstractmethod
     def get_data(self,
                  df_row,
+                 current_epoch_num=0,
                  run_mode=RunMode.TRAINING):
 
         """
         This method loads data
         :param df_row: row in the dataset dataframe that describes data sample
+        :param current_epoch_num: current epoch num during training, default is '0'
         :param run_mode: enumeration that specifies execution mode - training, validation, test or inference
         :return: single data sample
         """
@@ -54,11 +56,13 @@ class BaseDataset(BaseObject):
     @abc.abstractmethod
     def get_label(self,
                   df_row,
+                  current_epoch_num=0,
                   run_mode=RunMode.TRAINING):
 
         """
         This method loads ground truth label
         :param df_row: row in the dataset dataframe that describes data sample
+        :param current_epoch_num: current epoch num during training, default is '0'
         :param run_mode: enumeration that specifies execution mode - training, validation, test or inference
         :return: single ground truth label
         """
@@ -70,6 +74,7 @@ class BaseDataset(BaseObject):
                             data,
                             label=None,
                             info_row=None,
+                            current_epoch_num=0,
                             run_mode=RunMode.TRAINING):
 
         """
@@ -77,6 +82,7 @@ class BaseDataset(BaseObject):
         :param data: single data sample
         :param label: single ground truth label
         :param info_row: row in the dataset dataframe that describes data sample
+        :param current_epoch_num: current epoch num during training, default is '0'
         :param run_mode: enumeration that specifies execution mode - training, validation, test or inference
         :return: augmented data sample and corresponding augmented ground truth label
         """
@@ -88,6 +94,7 @@ class BaseDataset(BaseObject):
                             data,
                             label=None,
                             info_row=None,
+                            current_epoch_num=0,
                             run_mode=RunMode.TRAINING):
 
         """
@@ -95,6 +102,7 @@ class BaseDataset(BaseObject):
         :param data: single data sample
         :param label: single ground truth label
         :param info_row: row in the dataset dataframe that describes data sample
+        :param current_epoch_num: current epoch num during training, default is '0'
         :param run_mode: enumeration that specifies execution mode - training, validation, test or inference
         :return: preprocessed data sample and corresponding preprocessed ground truth label
         """
@@ -107,6 +115,7 @@ class BaseDataset(BaseObject):
                         get_label=False,
                         augment=False,
                         preprocess=False,
+                        current_epoch_num=0,
                         run_mode=RunMode.TRAINING):
 
         """
@@ -116,6 +125,7 @@ class BaseDataset(BaseObject):
         :param get_label: boolean flag; if True label is loaded
         :param augment: boolean flag; if True data and label are augmented
         :param preprocess: boolean flag; if True data and label are preprocessed
+        :param current_epoch_num: current epoch num during training, default is '0'
         :param run_mode: enumeration that specifies execution mode - training, validation, test or inference
         :return: data sample and corresponding ground truth label
         """
@@ -124,16 +134,16 @@ class BaseDataset(BaseObject):
         label = None
 
         if get_data:
-            data = self.get_data(df_row, run_mode)
+            data = self.get_data(df_row, current_epoch_num, run_mode)
 
         if get_label:
-            label = self.get_label(df_row, run_mode)
+            label = self.get_label(df_row, current_epoch_num, run_mode)
 
         if augment:
-            data, label = self.apply_augmentations(data, label, df_row, run_mode)
+            data, label = self.apply_augmentations(data, label, df_row, current_epoch_num, run_mode)
 
         if preprocess:
-            data, label = self.apply_preprocessing(data, label, df_row, run_mode)
+            data, label = self.apply_preprocessing(data, label, df_row, current_epoch_num, run_mode)
 
         return data, label
 
@@ -179,7 +189,7 @@ class BaseDataset(BaseObject):
                                                   preprocessed_data_and_labels=None,
                                                   not_preprocessed_data_and_labels=None,
                                                   batch_df=None,
-                                                  batch_id=0,
+                                                  fold=0,
                                                   run_mode=RunMode.TEST):
 
         """
@@ -187,8 +197,8 @@ class BaseDataset(BaseObject):
         :param predictions: model output
         :param preprocessed_data_and_labels: model input; tuple (data, labels)
         :param not_preprocessed_data_and_labels: input to model before preprocessing; tuple (data, labels)
-        :param batch_df: dataframe that describes batch of data with 'data_id'
-        :param batch_id: number that identifies batch of data
+        :param batch_df: dataframe that describes batch of data
+        :param fold: number of current fold
         :param run_mode: enumeration that specifies execution mode - test or inference
         :return: postprocessed model output
         """
@@ -201,30 +211,20 @@ class BaseDataset(BaseObject):
                                 preprocessed_data_and_labels,
                                 not_preprocessed_data_and_labels=None,
                                 batch_df=None,
-                                batch_id=0,
-                                output_dir=None):
+                                fold=0,
+                                output_dir=None,
+                                task=None):
 
         """
         This method calculates metrics for batch of data
         :param postprocessed_predictions: postprocessed model output
         :param preprocessed_data_and_labels: model input; tuple (data, labels)
         :param not_preprocessed_data_and_labels: input to model before preprocessing; tuple (data, labels)
-        :param batch_df: dataframe that describes batch of data with 'data_id'
-        :param batch_id: number that identifies batch of data
+        :param batch_df: dataframe that describes batch of data
+        :param fold: number of current fold
         :param output_dir: directory to save plots / images
+        :param task: instance of ClearML task
         :return None
-        """
-
-        pass
-
-    @abc.abstractmethod
-    def aggregate_metrics_for_all_batches(self,
-                                          output_dir=None):
-
-        """
-        This method aggregates metrics for all batches of data to get results for all test data
-        param output_dir: directory to save plots / images
-        return: None
         """
 
         pass
@@ -237,7 +237,9 @@ class BaseDataset(BaseObject):
                         preprocessed_data_and_labels=None,
                         not_preprocessed_data_and_labels=None,
                         batch_df=None,
-                        batch_id=0):
+                        fold=0,
+                        run_mode=RunMode.TEST,
+                        task=None):
 
         """
         This method calculates metrics for batch of data
@@ -246,9 +248,42 @@ class BaseDataset(BaseObject):
         :param not_postprocessed_predictions: model output before postprocessing
         :param preprocessed_data_and_labels: model input; tuple (data, labels)
         :param not_preprocessed_data_and_labels: input to model before preprocessing; tuple (data, labels)
-        :param batch_df: dataframe that describes batch of data with 'data_id'
-        :param batch_id: number that identifies batch of data
+        :param batch_df: dataframe that describes batch of data
+        :param fold: number of current fold
+        :param run_mode: enumeration that specifies execution mode - test or inference
+        :param task: instance of ClearML task
         :return None
         """
 
         pass
+
+    @abc.abstractmethod
+    def aggregate_predictions_for_all_batches(self,
+                                              fold=0,
+                                              output_dir=None,
+                                              task=None):
+
+        """
+        This method aggregates metrics for all batches of data to get results for all fold data
+        :param fold: number of current fold
+        :param output_dir: directory to save plots / images
+        :param task: instance of ClearML task
+        :return: None
+        """
+
+        pass
+
+    @abc.abstractmethod
+    def aggregate_predictions_for_all_folds(self,
+                                            output_dir=None,
+                                            task=None):
+
+        """
+        This method aggregates metrics for all folds to get results for all test data
+        :param output_dir: directory to save plots / images
+        :param task: instance of ClearML task
+        :return: None
+        """
+
+        pass
+
