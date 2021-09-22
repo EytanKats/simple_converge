@@ -17,10 +17,12 @@ class CheckpointCallback(BaseCallback):
 
         super(CheckpointCallback, self).__init__()
 
-        self.checkpoint_path = None
+        self.checkpoint_path = ""
         self.save_best_only = True
-        self.save_weights_only = True
+        self.save_weights_only = False
         self.monitor = "val_loss"
+        self.mode = "min"
+        self.save_freq = "epoch"
 
     def parse_args(self, **kwargs):
 
@@ -44,6 +46,12 @@ class CheckpointCallback(BaseCallback):
         if "monitor" in self.params.keys():
             self.monitor = self.params["monitor"]
 
+        if "mode" in self.params.keys():
+            self.mode = self.params["mode"]
+
+        if "save_freq" in self.params.keys():
+            self.save_freq = self.params["save_freq"]
+
     def get_callback(self):
 
         """
@@ -54,6 +62,8 @@ class CheckpointCallback(BaseCallback):
         callback = tf.keras.callbacks.ModelCheckpoint(filepath=self.checkpoint_path,
                                                       save_best_only=self.save_best_only,
                                                       save_weights_only=self.save_weights_only,
-                                                      monitor=self.monitor)
+                                                      monitor=self.monitor,
+                                                      mode=self.mode,
+                                                      save_freq=self.save_freq)
 
         return callback

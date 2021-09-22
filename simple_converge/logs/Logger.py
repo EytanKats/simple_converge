@@ -62,11 +62,13 @@ class Logger(BaseObject):
         self.file_handler = None
 
     def log(self, message, level=LogLevels.DEBUG, console=True):
-        if self.file_handler is None:
-            print("File handler is not defined, call start method")
 
         if console:
             print(message)
+
+        if self.file_handler is None:
+            print("File handler is not defined, call start method")
+            return
 
         if level == LogLevels.DEBUG:
             self.logger.debug(message)

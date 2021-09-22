@@ -1,5 +1,7 @@
 import os
+import pathlib
 import itertools
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -75,7 +77,7 @@ def training_plot(training_log_path,
                   show=False,
                   output_folder="",
                   fig_size=(10, 5.5),
-                  clear_ml_task=None):
+                  mlops_task=None):
 
     """
     This method draws line plots for each metric specified in training log file
@@ -87,7 +89,7 @@ def training_plot(training_log_path,
     :param show: if True plot will be shown, if False plot will be saved
     :param output_folder: folder path to save the plot
     :param fig_size: size of the plot
-    :param clear_ml_task: ClearML Task object that is used to save the plot into experiments management framework
+    :param mlops_task: ClearML Task object that is used to save the plot into experiments management framework
     :return: None
     """
 
@@ -114,8 +116,9 @@ def training_plot(training_log_path,
         plt.plot(epochs, val_metrics, 'r', label="validation")
         plt.legend(loc="best")
 
-        if clear_ml_task:
-            clear_ml_task.logger.report_matplotlib_figure(title=metric, series="", iteration=0, figure=plt)
+        if mlops_task:
+            mlops_logger = mlops_task.get_logger()
+            mlops_logger.report_matplotlib_figure(title=metric, series=metric, figure=ax_acc, report_image=True)
 
         if show:
             plt.show()
@@ -170,7 +173,9 @@ def confusion_matrix_plot(confusion_matrix,
                           cmap=plt.cm.Blues,
                           show=False,
                           output_path="",
-                          fig_size=(10, 5.5)):
+                          fig_size=(10, 5.5),
+                          mlops_task=None,
+                          mlops_iteration=None):
 
     """
     This method draws confusion matrix plot (https://en.wikipedia.org/wiki/Confusion_matrix)
@@ -181,13 +186,14 @@ def confusion_matrix_plot(confusion_matrix,
     :param show: if True plot will be shown, if False plot will be saved
     :param output_path: path to save the plot
     :param fig_size: size of the plot
+    :param mlops_task: ClearML Task object that is used to save the plot into experiments management framework
     :return: None
     """
 
     if normalize:
         confusion_matrix = metrics.normalized_confusion_matrix(confusion_matrix)
 
-    plt.figure(figsize=fig_size)
+    fig = plt.figure(figsize=fig_size)
     plt.imshow(confusion_matrix, interpolation='nearest', cmap=cmap)
     plt.title("Confusion Matrix")
     plt.colorbar()
@@ -205,6 +211,11 @@ def confusion_matrix_plot(confusion_matrix,
     plt.xlabel('Predicted label')
 
     plt.tight_layout()
+
+    if mlops_task:
+        title = pathlib.Path(output_path).stem
+        mlops_logger = mlops_task.get_logger()
+        mlops_logger.report_matplotlib_figure(title=title, series=title, iteration=mlops_iteration, figure=fig, report_image=True)
 
     if show:
         plt.show()

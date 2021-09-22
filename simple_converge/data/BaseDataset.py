@@ -189,7 +189,7 @@ class BaseDataset(BaseObject):
                                                   preprocessed_data_and_labels=None,
                                                   not_preprocessed_data_and_labels=None,
                                                   batch_df=None,
-                                                  batch_id=0,
+                                                  fold=0,
                                                   run_mode=RunMode.TEST):
 
         """
@@ -197,8 +197,8 @@ class BaseDataset(BaseObject):
         :param predictions: model output
         :param preprocessed_data_and_labels: model input; tuple (data, labels)
         :param not_preprocessed_data_and_labels: input to model before preprocessing; tuple (data, labels)
-        :param batch_df: dataframe that describes batch of data with 'data_id'
-        :param batch_id: number that identifies batch of data
+        :param batch_df: dataframe that describes batch of data
+        :param fold: number of current fold
         :param run_mode: enumeration that specifies execution mode - test or inference
         :return: postprocessed model output
         """
@@ -211,30 +211,20 @@ class BaseDataset(BaseObject):
                                 preprocessed_data_and_labels,
                                 not_preprocessed_data_and_labels=None,
                                 batch_df=None,
-                                batch_id=0,
-                                output_dir=None):
+                                fold=0,
+                                output_dir=None,
+                                task=None):
 
         """
         This method calculates metrics for batch of data
         :param postprocessed_predictions: postprocessed model output
         :param preprocessed_data_and_labels: model input; tuple (data, labels)
         :param not_preprocessed_data_and_labels: input to model before preprocessing; tuple (data, labels)
-        :param batch_df: dataframe that describes batch of data with 'data_id'
-        :param batch_id: number that identifies batch of data
+        :param batch_df: dataframe that describes batch of data
+        :param fold: number of current fold
         :param output_dir: directory to save plots / images
+        :param task: instance of ClearML task
         :return None
-        """
-
-        pass
-
-    @abc.abstractmethod
-    def aggregate_metrics_for_all_batches(self,
-                                          output_dir=None):
-
-        """
-        This method aggregates metrics for all batches of data to get results for all test data
-        param output_dir: directory to save plots / images
-        return: None
         """
 
         pass
@@ -247,7 +237,9 @@ class BaseDataset(BaseObject):
                         preprocessed_data_and_labels=None,
                         not_preprocessed_data_and_labels=None,
                         batch_df=None,
-                        batch_id=0):
+                        fold=0,
+                        run_mode=RunMode.TEST,
+                        task=None):
 
         """
         This method calculates metrics for batch of data
@@ -256,9 +248,42 @@ class BaseDataset(BaseObject):
         :param not_postprocessed_predictions: model output before postprocessing
         :param preprocessed_data_and_labels: model input; tuple (data, labels)
         :param not_preprocessed_data_and_labels: input to model before preprocessing; tuple (data, labels)
-        :param batch_df: dataframe that describes batch of data with 'data_id'
-        :param batch_id: number that identifies batch of data
+        :param batch_df: dataframe that describes batch of data
+        :param fold: number of current fold
+        :param run_mode: enumeration that specifies execution mode - test or inference
+        :param task: instance of ClearML task
         :return None
         """
 
         pass
+
+    @abc.abstractmethod
+    def aggregate_predictions_for_all_batches(self,
+                                              fold=0,
+                                              output_dir=None,
+                                              task=None):
+
+        """
+        This method aggregates metrics for all batches of data to get results for all fold data
+        :param fold: number of current fold
+        :param output_dir: directory to save plots / images
+        :param task: instance of ClearML task
+        :return: None
+        """
+
+        pass
+
+    @abc.abstractmethod
+    def aggregate_predictions_for_all_folds(self,
+                                            output_dir=None,
+                                            task=None):
+
+        """
+        This method aggregates metrics for all folds to get results for all test data
+        :param output_dir: directory to save plots / images
+        :param task: instance of ClearML task
+        :return: None
+        """
+
+        pass
+

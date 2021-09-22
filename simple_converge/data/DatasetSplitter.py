@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 
 from simple_converge.utils import dataset_utils
-from simple_converge.utils.RunMode import RunMode
 from simple_converge.logs.LogLevels import LogLevels
 from simple_converge.base.BaseObject import BaseObject
 
@@ -109,12 +108,10 @@ class DatasetSplitter(BaseObject):
         if "test_df_file_name" in self.params.keys():
             self.test_df_file_name = self.params["test_df_file_name"]
 
-    def initialize(self,
-                   run_mode=RunMode.TRAINING):
+    def load_dataset_file(self):
 
         """
-        This method loads dataset file and initializes lists of training, validation and test dataframes
-        :param run_mode: enumeration that specifies execution mode - training, validation, test or inference
+        This method loads dataset file
         :return: None
         """
 
@@ -124,11 +121,6 @@ class DatasetSplitter(BaseObject):
             self.logger.log("Dataset contains {0} entries".format(self.dataset_df.shape[0]))
         else:
             self.logger.log("Data definition file path is not specified")
-
-        if run_mode != run_mode.INFERENCE:
-            self.train_df_list = [None] * self.folds_num
-            self.val_df_list = [None] * self.folds_num
-            self.test_df_list = [None] * self.folds_num
 
     def set_training_dataframe(self,
                                training_df,
@@ -172,6 +164,20 @@ class DatasetSplitter(BaseObject):
         self.test_df_list[fold_num] = test_df
         self.logger.log("Test dataframe with {0} entries is set for fold {1}".format(test_df.shape[0], fold_num))
 
+    def set_custom_data_split(self, train_data_files, val_data_files, test_data_files):
+
+        """
+        This method sets training, validation and test dataframe lists according to custom lists of
+        training, validation and test files defined in the settings.
+        :return: None
+        """
+
+        self.logger.log("Loading custom lists of training validation and test files")
+
+        self.train_df_list = [dataset_utils.load_dataset_file(data_file) for data_file in train_data_files]
+        self.val_df_list = [dataset_utils.load_dataset_file(data_file) for data_file in val_data_files]
+        self.test_df_list = [dataset_utils.load_dataset_file(data_file) for data_file in test_data_files]
+
     def split_dataset(self):
 
         """
@@ -179,6 +185,11 @@ class DatasetSplitter(BaseObject):
         and farther split each fold to training, validation and test partitions
         :return: None
         """
+
+        # Create lists to hold dataset partitions
+        self.train_df_list = [None] * self.folds_num
+        self.val_df_list = [None] * self.folds_num
+        self.test_df_list = [None] * self.folds_num
 
         # Set random seed to ensure reproducibility of dataset partitioning across experiments on same hardware
         np.random.seed(self.data_random_seed)
@@ -342,6 +353,7 @@ class DatasetSplitter(BaseObject):
         :param fold: fold number
         """
 
+        self.logger.log(f"Saving training, validation and test dataframes in {output_dir} for fold {fold}")
         self.train_df_list[fold].to_csv(os.path.join(output_dir, self.train_df_file_name))
         self.val_df_list[fold].to_csv(os.path.join(output_dir, self.val_df_file_name))
         self.test_df_list[fold].to_csv(os.path.join(output_dir, self.test_df_file_name))

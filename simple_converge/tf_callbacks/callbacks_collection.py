@@ -9,6 +9,6 @@ callbacks_collection = {
     "checkpoint_callback": CheckpointCallback,
     "csv_logger_callback": CsvLoggerCallback,
     "early_stopping_callback": EarlyStoppingCallback,
-    "reduce_lr_on_plateau": ReduceLrOnPlateauCallback,
-    "tensorboard": TensorBoardCallback
+    "reduce_lr_on_plateau_callback": ReduceLrOnPlateauCallback,
+    "tensorboard_callback": TensorBoardCallback
 }
