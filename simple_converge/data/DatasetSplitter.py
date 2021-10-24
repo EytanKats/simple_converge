@@ -1,5 +1,6 @@
 import os
 import sys
+import sklearn
 import numpy as np
 import pandas as pd
 
@@ -307,10 +308,8 @@ class DatasetSplitter(BaseObject):
             self.val_df_list[fold] = pd.concat(groups_val_df_list)
             self.test_df_list[fold] = pd.concat(groups_test_df_list)
 
-            self.logger.log("For fold {0}:".format(fold))
-            self.logger.log("  {0} training samples".format(self.train_df_list[fold].shape[0]))
-            self.logger.log("  {0} validation samples".format(self.val_df_list[fold].shape[0]))
-            self.logger.log("  {0} test samples".format(self.test_df_list[fold].shape[0]))
+        # Print number of examples in training, validation and test for each fold
+        self.print_data_split()
 
     def split_dataset_to_folds_randomly(self):
 
@@ -321,13 +320,17 @@ class DatasetSplitter(BaseObject):
 
         self.logger.log("Split dataset to folds and training, validation and test partitions for each fold randomly")
 
-        for fold in range(0, self.folds_num):
+        # For one fold regime data will be divided according to training-validation fraction and training fraction
+        # defined in settings.
+        # For multiple folds regime data will be divided with use of sklearn module and according to training
+        # fraction defined in settings
+
+        if self.folds_num == 1:
 
             groups_train_df_list = list()
             groups_val_df_list = list()
             groups_test_df_list = list()
-            for group_idx, group_df in enumerate(self.groups_df_list):
-
+            for group_df in self.groups_df_list:
                 train_val_split_idx = int(group_df.shape[0] * self.train_val_fraction)
                 group_train_val_df = group_df.iloc[0:train_val_split_idx]
                 groups_test_df_list.append(group_df.iloc[train_val_split_idx:])
@@ -336,14 +339,40 @@ class DatasetSplitter(BaseObject):
                 groups_train_df_list.append(group_train_val_df.iloc[0:train_split_idx])
                 groups_val_df_list.append(group_train_val_df.iloc[train_split_idx:])
 
-            self.train_df_list[fold] = pd.concat(groups_train_df_list)
-            self.val_df_list[fold] = pd.concat(groups_val_df_list)
-            self.test_df_list[fold] = pd.concat(groups_test_df_list)
+            self.train_df_list[0] = pd.concat(groups_train_df_list)
+            self.val_df_list[0] = pd.concat(groups_val_df_list)
+            self.test_df_list[0] = pd.concat(groups_test_df_list)
 
-            self.logger.log("For fold {0}:".format(fold))
-            self.logger.log("  {0} training samples".format(self.train_df_list[fold].shape[0]))
-            self.logger.log("  {0} validation samples".format(self.val_df_list[fold].shape[0]))
-            self.logger.log("  {0} test samples".format(self.test_df_list[fold].shape[0]))
+        else:
+
+            # Split each group to multiple folds
+            kf_list = list()
+            kf = sklearn.model_selection.KFold(n_splits=self.folds_num, shuffle=True, random_state=self.data_random_seed)
+            for group_df in self.groups_df_list:
+                kf_list.append(kf.split(group_df))
+
+            # Combine group splits to folds
+            for fold in range(0, self.folds_num):
+
+                fold_split = [next(kf_list[idx]) for idx in range(len(kf_list))]
+
+                groups_train_df_list = list()
+                groups_val_df_list = list()
+                groups_test_df_list = list()
+                for group_idx, group_df in enumerate(self.groups_df_list):
+                    group_train_val_df = group_df.iloc[fold_split[group_idx][0]]
+                    groups_test_df_list.append(group_df.iloc[fold_split[group_idx][0]])
+
+                    train_split_idx = int(group_train_val_df.shape[0] * self.train_fraction)
+                    groups_train_df_list.append(group_train_val_df.iloc[0:train_split_idx])
+                    groups_val_df_list.append(group_train_val_df.iloc[train_split_idx:])
+
+                self.train_df_list[fold] = pd.concat(groups_train_df_list)
+                self.val_df_list[fold] = pd.concat(groups_val_df_list)
+                self.test_df_list[fold] = pd.concat(groups_test_df_list)
+
+        # Print number of examples in training, validation and test for each fold
+        self.print_data_split()
 
     def save_dataframes_for_fold(self, output_dir, fold):
 
@@ -357,3 +386,16 @@ class DatasetSplitter(BaseObject):
         self.train_df_list[fold].to_csv(os.path.join(output_dir, self.train_df_file_name))
         self.val_df_list[fold].to_csv(os.path.join(output_dir, self.val_df_file_name))
         self.test_df_list[fold].to_csv(os.path.join(output_dir, self.test_df_file_name))
+
+    def print_data_split(self):
+
+        """
+        This method prints number of examples in training, validation and test for each fold
+        :return: None
+        """
+
+        for fold in range(0, self.folds_num):
+            self.logger.log("For fold {0}:".format(fold))
+            self.logger.log("  {0} training samples".format(self.train_df_list[fold].shape[0]))
+            self.logger.log("  {0} validation samples".format(self.val_df_list[fold].shape[0]))
+            self.logger.log("  {0} test samples".format(self.test_df_list[fold].shape[0]))

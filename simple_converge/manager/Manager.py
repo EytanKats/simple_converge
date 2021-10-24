@@ -336,7 +336,7 @@ class Manager(object):
 
             # Evaluate
             self.predict_fold(fold, fold_output_folder,
-                              model, test_data_files[fold],
+                              model, test_data_files[fold_idx],
                               split_to_batches=self.settings.manager_args["split_test_data_to_batches"],
                               batch_size=self.settings.manager_args["test_batch_size"],
                               get_original_data=self.settings.manager_args["get_original_data_during_test"],
