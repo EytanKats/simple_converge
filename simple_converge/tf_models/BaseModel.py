@@ -1,5 +1,8 @@
+import time
 import numpy as np
 import tensorflow as tf
+
+from tqdm import tqdm
 
 from simple_converge.logs.LogLevels import LogLevels
 from simple_converge.base.BaseObject import BaseObject
@@ -279,20 +282,101 @@ class BaseModel(BaseObject):
 
     def compile(self):
 
-        losses_fns, losses_weights = self._get_losses()
-
-        self.model.compile(loss=losses_fns,
-                           loss_weights=losses_weights,
-                           optimizer=self._get_optimizer(),
-                           metrics=self._get_metrics())
+        pass
 
     def fit(self):
 
-        self.model.fit(
-            x=self.train_sequence,
-            epochs=self.epochs,
-            callbacks=self._get_callbacks(),
-            validation_data=self.val_sequence)
+        # self.model.fit(
+        #     x=self.train_sequence,
+        #     epochs=self.epochs,
+        #     callbacks=self._get_callbacks(),
+        #     validation_data=self.val_sequence)
+
+        # Instantiate optimizer
+        optimizer = self._get_optimizer()
+
+        # Get loss functions
+        loss_fns, loss_weights = self._get_losses()
+
+        # Get metrics
+        metrics = self._get_metrics()
+
+        # Instantiate history lists
+        batch_loss_history = list()
+        batch_metrics_history = list()
+        epoch_loss_history = list()
+        epoch_metrics_history = list()
+
+        # @tf.function
+        def _step(data, labels, cur_epoch):
+
+            with tf.GradientTape() as gradient_tape:
+
+                # Forward pass
+                model_output = self.model(data, training=True)
+
+                # Calculate loss
+                total_loss = 0
+                int_loss_list = list()
+
+                for int_loss_idx, _ in enumerate(self.loss_args):
+                    loss = loss_fns[int_loss_idx](labels[int_loss_idx], model_output[int_loss_idx], cur_epoch=cur_epoch)
+                    int_loss_list.append(loss)
+                    total_loss += loss * loss_weights[int_loss_idx]
+
+                batch_loss_history.append(int_loss_list)
+
+                # Calculate metrics
+
+            # Backward pass
+            gradients = gradient_tape.gradient(total_loss, self.model.trainable_variables)
+            optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
+
+        # Epochs loop
+        for epoch in range(self.epochs):
+
+            start = time.time()
+            self.logger.log(f'Epoch {epoch}')
+
+            # Training mini-batches loop
+            for batch_data, batch_labels in tqdm(self.train_sequence, desc='Training'):
+                _step(batch_data, batch_labels, epoch)
+
+            # Calculate and log mean training loss for epoch
+            for loss_idx, loss_args in enumerate(self.loss_args):
+                loss_list = [batch_loss_history[idx][loss_idx] for idx in range(len(self.train_sequence))]
+                mean_loss = tf.math.reduce_mean(loss_list).numpy()
+
+                epoch_loss_history.append(mean_loss)
+                self.logger.log(f'Training loss {loss_idx} - {loss_args["metric_name"]}: {mean_loss}.4f')
+
+                # Log to ClearML
+
+            # Calculate and log mean training metrics for epoch
+
+            # Zero batch loss and metric history after training mini-batches loop
+            batch_loss_history = list()
+            batch_metrics_history = list()
+
+            # Validation mini-batches loop
+            for batch_data, batch_labels in tqdm(self.val_sequence, desc="Validation"):
+                _step(batch_data, batch_labels, epoch)
+
+            # Calculate and log mean training loss for epoch
+            for loss_idx, loss_args in enumerate(self.loss_args):
+                loss_list = [batch_loss_history[idx][loss_idx] for idx in range(len(self.train_sequence))]
+                mean_loss = tf.math.reduce_mean(loss_list).numpy()
+
+                epoch_loss_history.append(mean_loss)
+                self.logger.log(f'Validation loss {loss_idx} - {loss_args["metric_name"]}: {mean_loss}.4f')
+
+            # Zero batch loss and metric history after validation mini-batches loop
+            batch_loss_history = list()
+            batch_metrics_history = list()
+
+            # Calculate and log mean validation loss for epoch
+
+            # Calculate and log mean validation metrics for epoch
 
     def predict(self, data):
 
