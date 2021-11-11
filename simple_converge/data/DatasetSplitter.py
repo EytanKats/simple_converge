@@ -361,7 +361,7 @@ class DatasetSplitter(BaseObject):
                 groups_test_df_list = list()
                 for group_idx, group_df in enumerate(self.groups_df_list):
                     group_train_val_df = group_df.iloc[fold_split[group_idx][0]]
-                    groups_test_df_list.append(group_df.iloc[fold_split[group_idx][0]])
+                    groups_test_df_list.append(group_df.iloc[fold_split[group_idx][1]])
 
                     train_split_idx = int(group_train_val_df.shape[0] * self.train_fraction)
                     groups_train_df_list.append(group_train_val_df.iloc[0:train_split_idx])
