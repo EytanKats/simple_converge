@@ -17,7 +17,6 @@ from simple_converge.data.DatasetSplitter import DatasetSplitter
 
 from simple_converge.tf_models.models_collection import models_collection
 from simple_converge.tf_metrics.metrics_collection import metrics_collection
-from simple_converge.tf_callbacks.callbacks_collection import callbacks_collection
 from simple_converge.tf_optimizers.optimizers_collection import optimizers_collection
 from simple_converge.tf_regularizers.regularizers_collection import regularizers_collection
 
@@ -44,7 +43,6 @@ class Manager(object):
         self.collection = dict()
         self.collection["models"] = models_collection
         self.collection["metrics"] = metrics_collection
-        self.collection["callbacks"] = callbacks_collection
         self.collection["optimizers"] = optimizers_collection
         self.collection["regularizers"] = regularizers_collection
 
@@ -111,17 +109,9 @@ class Manager(object):
             self.logger.log(f'Updating collection of {collection_id}')
             self.collection[collection_id].update(custom_collection)
 
-    def update_callbacks_settings(self, fold_output_folder):
+    def update_model_settings(self, fold_output_folder):
 
-        for callback_args in self.settings.model_args["callbacks_args"]:
-
-            if callback_args["callback_name"] == "checkpoint_callback":
-                self.output_checkpoint_path = os.path.join(fold_output_folder, "checkpoint",
-                                                           callback_args["output_weights_name"])
-                callback_args["checkpoint_path"] = os.path.join(self.output_checkpoint_path)
-
-            if callback_args["callback_name"] == "tensorboard_callback":
-                callback_args["log_dir"] = os.path.join(fold_output_folder, callback_args["log_dir_name"])
+        self.settings.model_args['ckpt_path'] = os.path.join(fold_output_folder, self.settings.model_args['ckpt_prefix'])
 
     def create_model(self):
 
@@ -206,14 +196,12 @@ class Manager(object):
     def fit(self,
             custom_models_collection=None,
             custom_metrics_collection=None,
-            custom_callbacks_collection=None,
             custom_optimizers_collection=None,
             custom_regularizers_collection=None):
 
-        # Update collections with custom models, metrics, callbacks, optimizers, regularizers
+        # Update collections with custom models, metrics, optimizers, regularizers
         self.update_collection("models", custom_models_collection)
         self.update_collection("metrics", custom_metrics_collection)
-        self.update_collection("callbacks", custom_callbacks_collection)
         self.update_collection("optimizers", custom_optimizers_collection)
         self.update_collection("regularizers", custom_regularizers_collection)
 
@@ -232,53 +220,47 @@ class Manager(object):
         for fold in self.settings.manager_args["active_folds"]:
 
             # Create simulation directory for current fold
-            self.logger.log(f'Creating simulation folder for fold {fold}')
+            self.logger.log(f'\nCreate simulation folder for fold {fold}')
             fold_output_folder = os.path.join(self.settings.manager_args["output_folder"], str(fold))
             os.makedirs(fold_output_folder)
 
             # Save training, validation and test dataframes for current fold
             self.dataset_splitter.save_dataframes_for_fold(fold_output_folder, fold)
 
-            # Update callbacks output directories for current fold
-            self.update_callbacks_settings(fold_output_folder)
+            # Update output directories for current fold
+            self.update_model_settings(fold_output_folder)
 
             # Create model
-            self.logger.log(f"Creating model for fold: {fold}")
+            self.logger.log(f"Create model for fold: {fold}")
             model = self.create_model()
             model.create_train_sequence(self.dataset_splitter.train_df_list[fold], self.dataset)
             model.create_val_sequence(self.dataset_splitter.val_df_list[fold], self.dataset)
 
             # Set collections to model
             model.set_metrics_collection(self.collection["metrics"])
-            model.set_callbacks_collection(self.collection["callbacks"])
             model.set_optimizers_collection(self.collection["optimizers"])
             model.set_regularizers_collection(self.collection["regularizers"])
 
-            # Load start point model or build model from scratch and compile it
-            if self.settings.manager_args["start_point_model"]:
+            # Build model and create checkpoint
+            self.logger.log(f'Build model and create checkpoint')
+            model.build()
+            model.create_checkpoint()
 
-                self.logger.log(f"Loading start point model and compiling it (if needed)")
-                model.load_model(self.settings.manager_args["start_point_model_path"])
-                if self.settings.manager_args["compile_start_point_model"]:
-                    model.compile()
-            else:
-                self.logger.log(f"Building model and compiling it")
-                model.build()
-                model.compile()
+            # Load start point checkpoint
+            if self.settings.manager_args["start_point_ckpt"]:
+                self.logger.log(f'Load start point checkpoint')
+                model.restore(self.settings.manager_args["start_point_ckpt_path"])
 
             # Train model
-            self.logger.log(f"Training model")
-            model.fit()
+            self.logger.log(f"Train model")
+            model.fit(fold=fold, mlops_task=self.mlops_task)
 
-            # Load best weights and save the entire model
-            model.load_weights(self.output_checkpoint_path)
-            model.save_model(os.path.join(fold_output_folder, "model"))
-
-            # TODO: upload model to dedicated storage and write it path to ClearML
+            # TODO: upload checkpoint to dedicated storage and write it path to ClearML
 
             # Test model
             if self.settings.manager_args["evaluate_at_the_end_of_training"]:
 
+                model.restore(latest=True)
                 self.predict_fold(fold, fold_output_folder,
                                   model, self.dataset_splitter.test_df_list[fold],
                                   split_to_batches=self.settings.manager_args["split_test_data_to_batches"],
@@ -298,16 +280,20 @@ class Manager(object):
         # If 'test_simulation' flag is true load test partition from simulation in 'output_folder'
         # Else create new 'output_folder' and 'load' custom test data files
         if self.settings.manager_args["test_simulation"]:
-            self.logger.log(f'Loading test data files from simulation'
-                            f' {self.settings.manager_args["simulation_folder"]}')
+            self.logger.log(f'Loading test data files from simulation {self.settings.manager_args["simulation_folder"]}')
 
-            test_data_files_paths = [os.path.join(self.settings.manager_args["simulation_folder"],
-                                                  str(fold), self.settings.data_splitter_args["test_df_file_name"])
+            test_data_files_paths = [os.path.join(self.settings.manager_args["simulation_folder"], str(fold), self.settings.data_splitter_args["test_df_file_name"])
                                      for fold in self.settings.manager_args["active_folds"]]
             test_data_files = [load_dataset_file(file_path) for file_path in test_data_files_paths]
 
-            models_paths = [os.path.join(self.settings.manager_args["simulation_folder"], str(fold), "checkpoint", "weights")
-                            for fold in self.settings.manager_args["active_folds"]]
+            ckpt_paths = list()
+            for fold in self.settings.manager_args['active_folds']:
+                ckpt_path = os.path.join(self.settings.manager_args['simulation_folder'], str(fold), self.settings.model_args['ckpt_prefix'])
+                latest_ckpt = glob.glob(ckpt_path + '*')[-1]
+
+                latest_ckpt_num = os.path.basename(latest_ckpt).split('.')[0][len(os.path.basename(ckpt_path)):]
+                latest_ckpt_path = ckpt_path + latest_ckpt_num
+                ckpt_paths.append(latest_ckpt_path)
 
         else:
             self.logger.log(f'Loading custom test data files {self.settings.manager_args["test_data_files"]}')
@@ -316,12 +302,12 @@ class Manager(object):
             test_data_files = [load_dataset_file(file_path) for file_path in test_data_files_paths]
             self.dataset_splitter.set_custom_data_split([], [], test_data_files)
 
-            models_paths = self.settings.manager_args["test_models_paths"]
+            ckpt_paths = self.settings.manager_args["test_ckpt_paths"]
 
         # Test model for each fold
         for fold_idx, fold in enumerate(self.settings.manager_args["active_folds"]):
 
-            self.logger.log(f'Test model {models_paths[fold_idx]} for file: {test_data_files_paths[fold_idx]}')
+            self.logger.log(f'Test model {ckpt_paths[fold_idx]} for file: {test_data_files_paths[fold_idx]}')
             self.logger.log(f'Number of samples to test: {test_data_files[fold_idx].shape[0]}')
 
             # Update simulation directory for current fold
@@ -332,11 +318,12 @@ class Manager(object):
             self.logger.log(f"Creating model and loading weights")
             model = self.create_model()
             model.build()
-            model.load_weights(models_paths[fold_idx])
+            model.create_checkpoint()
+            model.restore(ckpt_paths[fold_idx])
 
             # Evaluate
             self.predict_fold(fold, fold_output_folder,
-                              model, test_data_files[fold],
+                              model, test_data_files[fold_idx],
                               split_to_batches=self.settings.manager_args["split_test_data_to_batches"],
                               batch_size=self.settings.manager_args["test_batch_size"],
                               get_original_data=self.settings.manager_args["get_original_data_during_test"],
@@ -370,7 +357,8 @@ class Manager(object):
         self.logger.log(f"Creating model and loading weights")
         model = self.create_model()
         model.build()
-        model.load_weights(self.settings.manager_args["inference_model_path"])
+        model.create_checkpoint()
+        model.restore(self.settings.manager_args["inference_ckpt_path"])
 
         self.predict_fold(0, self.settings.manager_args["output_folder"],
                           model, inference_df,
