@@ -33,8 +33,9 @@ class Sequence(tf.keras.utils.Sequence, BaseObject):
 
         self.subsample = False
         self.oversample = False
-        self.subsampling_column = ""
-        self.oversampling_column = ""
+        self.balance = False
+        self.balancing_num = 50
+        self.sampling_column = ""
 
         # Fields to be filled during execution
         self.current_epoch_num = 0
@@ -78,11 +79,14 @@ class Sequence(tf.keras.utils.Sequence, BaseObject):
         if "oversample" in self.params.keys():
             self.oversample = self.params["oversample"]
 
-        if "subsampling_column" in self.params.keys():
-            self.subsampling_column = self.params["subsampling_column"]
+        if "balance" in self.params.keys():
+            self.balance = self.params["balance"]
 
-        if "oversampling_column" in self.params.keys():
-            self.oversampling_column = self.params["oversampling_column"]
+        if "balancing_num" in self.params.keys():
+            self.balancing_num = self.params["balancing_num"]
+
+        if "sampling_column" in self.params.keys():
+            self.sampling_column = self.params["sampling_column"]
 
     def initialize(self):
 
@@ -201,6 +205,8 @@ class Sequence(tf.keras.utils.Sequence, BaseObject):
             dataset_df = self.oversample_data(self.dataset_df)
         elif self.subsample:
             dataset_df = self.subsample_data(self.dataset_df)
+        elif self.balance:
+            dataset_df = self.balance_data(self.dataset_df)
         else:
             dataset_df = self.dataset_df
 
@@ -233,17 +239,17 @@ class Sequence(tf.keras.utils.Sequence, BaseObject):
     def subsample_data(self, dataset_df):
 
         # Find number of samples in the smallest class
-        unique_values = dataset_df[self.subsampling_column].unique()
+        unique_values = dataset_df[self.sampling_column].unique()
         rows_cnt = []
         for value in unique_values:
-            value_info = dataset_df.loc[dataset_df[self.subsampling_column] == value]
+            value_info = dataset_df.loc[dataset_df[self.sampling_column] == value]
             rows_cnt.append(value_info.shape[0])
         min_count = np.min(rows_cnt)
 
         # Subsample equal number of samples from all the classes
         subsampled_dataset_df = pd.DataFrame()
         for value in unique_values:
-            value_info = dataset_df.loc[dataset_df[self.subsampling_column] == value]
+            value_info = dataset_df.loc[dataset_df[self.sampling_column] == value]
             value_info_subsampled = value_info.sample(n=min_count)
             subsampled_dataset_df = subsampled_dataset_df.append(value_info_subsampled)
 
@@ -252,20 +258,35 @@ class Sequence(tf.keras.utils.Sequence, BaseObject):
     def oversample_data(self, dataset_df):
 
         # Find number of samples in the largest class
-        unique_values = dataset_df[self.oversampling_column].unique()
+        unique_values = dataset_df[self.sampling_column].unique()
         rows_cnt = []
         for value in unique_values:
-            value_info = dataset_df.loc[dataset_df[self.oversampling_column] == value]
+            value_info = dataset_df.loc[dataset_df[self.sampling_column] == value]
             rows_cnt.append(value_info.shape[0])
         max_count = np.max(rows_cnt)
 
         # Oversample equal number of samples from all the classes
         oversampled_dataset_df = pd.DataFrame()
         for value in unique_values:
-            value_info = dataset_df.loc[dataset_df[self.oversampling_column] == value]
+            value_info = dataset_df.loc[dataset_df[self.sampling_column] == value]
             value_info_oversampled = value_info.sample(n=max_count, replace=True)
             oversampled_dataset_df = oversampled_dataset_df.append(value_info_oversampled)
 
         oversampled_dataset_df = oversampled_dataset_df.reset_index(drop=True)  # prevent duplicate indexes
 
         return oversampled_dataset_df
+
+    def balance_data(self, dataset_df):
+
+        unique_values = dataset_df[self.sampling_column].unique()
+
+        # Sample equal number of samples from all the classes
+        balanced_dataset_df = pd.DataFrame()
+        for value in unique_values:
+            value_info = dataset_df.loc[dataset_df[self.sampling_column] == value]
+            value_info_balanced = value_info.sample(n=self.balancing_num, replace=True)
+            balanced_dataset_df = balanced_dataset_df.append(value_info_balanced)
+
+        balanced_dataset_df = balanced_dataset_df.reset_index(drop=True)  # prevent duplicate indexes
+
+        return balanced_dataset_df
