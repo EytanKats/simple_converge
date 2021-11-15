@@ -319,7 +319,7 @@ class Manager(object):
             model = self.create_model()
             model.build()
             model.create_checkpoint()
-            model.load_weights(ckpt_paths[fold_idx])
+            model.restore(ckpt_paths[fold_idx])
 
             # Evaluate
             self.predict_fold(fold, fold_output_folder,
