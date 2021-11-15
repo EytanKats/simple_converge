@@ -25,30 +25,44 @@ class BaseModel(BaseObject):
         super(BaseModel, self).__init__()
 
         # Fields to be filled by parsing
-        self.start_point_model = False
-        self.start_point_model_path = ""
-        self.compile_start_point_model = False
-
         self.regularizer_args = None
         self.loss_args = None
         self.optimizer_args = None
         self.metrics_args = None
-        self.callbacks_args = None
         self.train_sequence_args = None
         self.val_sequence_args = None
 
         self.epochs = None
-        self.val_steps = None
-
         self.prediction_batch_size = None
+
+        self.monitor = "not_defined"
+        self.monitor_regime = "not_defined"
+
+        self.ckpt_freq = 1
+        self.ckpt_save_best_only = True
+        self.ckpt_path = ""
+
+        self.use_early_stopping = False
+        self.early_stopping_patience = 10
+
+        self.use_reduce_lr_on_plateau = False
+        self.reduce_lr_on_plateau_patience = 3
+        self.reduce_lr_on_plateau_factor = 0.8
+        self.reduce_lr_on_plateau_min = 1e-6
 
         # Fields to be filled during execution
         self.model = None
         self.train_sequence = None
         self.val_sequence = None
 
+        self.ckpt = None
+        self.monitor_cur_val = 0
+        self.monitor_best_val = 0
+        self.ckpt_best_epoch = 0
+        self.early_stopping_cnt = 0
+        self.reduce_lr_on_plateau_cnt = 0
+
         self.metrics_collection = None
-        self.callbacks_collection = None
         self.regularizers_collection = None
         self.optimizers_collection = None
 
@@ -62,15 +76,6 @@ class BaseModel(BaseObject):
 
         super(BaseModel, self).parse_args(**kwargs)
 
-        if "start_point_model" in self.params.keys():
-            self.start_point_model = self.params["start_point_model"]
-
-        if "start_point_model_path" in self.params.keys():
-            self.start_point_model_path = self.params["start_point_model_path"]
-
-        if "compile_start_point_model" in self.params.keys():
-            self.compile_start_point_model = self.params["compile_start_point_model"]
-
         if "regularizer_args" in self.params.keys():
             self.regularizer_args = self.params["regularizer_args"]
 
@@ -82,9 +87,6 @@ class BaseModel(BaseObject):
 
         if "metrics_args" in self.params.keys():
             self.metrics_args = self.params["metrics_args"]
-
-        if "callbacks_args" in self.params.keys():
-            self.callbacks_args = self.params["callbacks_args"]
 
         if "train_sequence_args" in self.params.keys():
             self.train_sequence_args = self.params["train_sequence_args"]
@@ -98,6 +100,39 @@ class BaseModel(BaseObject):
         if "prediction_batch_size" in self.params.keys():
             self.prediction_batch_size = self.params["prediction_batch_size"]
 
+        if "monitor" in self.params.keys():
+            self.monitor = self.params["monitor"]
+
+        if "monitor_regime" in self.params.keys():
+            self.monitor_regime = self.params["monitor_regime"]
+
+        if "ckpt_freq" in self.params.keys():
+            self.ckpt_freq = self.params["ckpt_freq"]
+
+        if "ckpt_save_best_only" in self.params.keys():
+            self.ckpt_save_best_only = self.params["ckpt_save_best_only"]
+
+        if "ckpt_path" in self.params.keys():
+            self.ckpt_path = self.params["ckpt_path"]
+
+        if "use_early_stopping" in self.params.keys():
+            self.use_early_stopping = self.params["use_early_stopping"]
+
+        if "early_stopping_patience" in self.params.keys():
+            self.early_stopping_patience = self.params["early_stopping_patience"]
+
+        if "use_reduce_lr_on_plateau" in self.params.keys():
+            self.use_reduce_lr_on_plateau = self.params["use_reduce_lr_on_plateau"]
+
+        if "reduce_lr_on_plateau_patience" in self.params.keys():
+            self.reduce_lr_on_plateau_patience = self.params["reduce_lr_on_plateau_patience"]
+
+        if "reduce_lr_on_plateau_factor" in self.params.keys():
+            self.reduce_lr_on_plateau_factor = self.params["reduce_lr_on_plateau_factor"]
+
+        if "reduce_lr_on_plateau_min" in self.params.keys():
+            self.reduce_lr_on_plateau_min = self.params["reduce_lr_on_plateau_min"]
+
     def set_metrics_collection(self, metrics_collection):
 
         """
@@ -107,16 +142,6 @@ class BaseModel(BaseObject):
         """
 
         self.metrics_collection = metrics_collection
-
-    def set_callbacks_collection(self, callbacks_collection):
-
-        """
-        This method sets callbacks collection that will be available for model training
-        :param callbacks_collection: dictionary of available callbacks
-        :return: None
-        """
-
-        self.callbacks_collection = callbacks_collection
 
     def set_optimizers_collection(self, optimizers_collection):
 
@@ -179,17 +204,21 @@ class BaseModel(BaseObject):
 
         self.val_sequence = self.create_sequence(self.val_sequence_args, dataframe, dataset)
 
+    def create_checkpoint(self):
+        self.ckpt = tf.train.Checkpoint(self.model)
+
     def build(self):
         pass
 
-    def load_weights(self, weights_path):
-        self.model.load_weights(weights_path)
+    def restore(self, ckpt_path='', latest=False):
 
-    def load_model(self, model_path):
-        self.model = tf.keras.models.load_model(model_path)
+        if latest:
+            path_to_restore = tf.train.latest_checkpoint
+        else:
+            path_to_restore = ckpt_path
 
-    def save_model(self, model_path):
-        self.model.save(model_path)
+        self.logger.log(f'Restore checkpoint {path_to_restore}')
+        self.ckpt.restore(path_to_restore)
 
     def _get_regularizer(self):
 
@@ -245,10 +274,11 @@ class BaseModel(BaseObject):
 
         """
         This method retrieves metrics using metrics arguments
-        :return: list of metrics
+        :return: list of metrics and metrics number
         """
 
         metrics_fns = list()
+        metrics_num = 0
         for metrics_args_for_output in self.metrics_args:
 
             metrics_fns_for_output = list()
@@ -259,38 +289,76 @@ class BaseModel(BaseObject):
                 metric_fn = metric_obj.get_metric()
                 metrics_fns_for_output.append(metric_fn)
 
+                metrics_num += 1
+
             metrics_fns.append(metrics_fns_for_output)
 
-        return metrics_fns
+        return metrics_fns, metrics_num
 
-    def _get_callbacks(self):
+    def _checkpoint(self, epoch):
 
-        """
-        This method retrieves callbacks using callbacks arguments
-        :return: list of callbacks
-        """
+        if epoch % self.ckpt_freq != 0:
+            return
 
-        callbacks_fns = list()
-        for callback_args in self.callbacks_args:
-            callback_class = self.callbacks_collection[callback_args["callback_name"]]
-            callback_obj = callback_class()
-            callback_obj.parse_args(params=callback_args)
-            callback_fn = callback_obj.get_callback()
-            callbacks_fns.append(callback_fn)
+        if (self.monitor_regime == "min" and self.monitor_cur_val < self.monitor_best_val) or \
+           (self.monitor_regime == "max" and self.monitor_cur_val > self.monitor_best_val):
+            self.ckpt_best_epoch = epoch
+            self.ckpt.save(self.ckpt_path)
+            self.logger.log(f'Checkpoint saved for epoch {epoch}, {self.monitor} = {self.monitor_cur_val:.4f}')
+        elif not self.ckpt_save_best_only:
+            self.ckpt.save(self.ckpt_path)
+            self.logger.log(f'Checkpoint saved for epoch {epoch}')
 
-        return callbacks_fns
+    def _stop_early(self):
 
-    def compile(self):
+        if (self.monitor_regime == "min" and self.monitor_cur_val < self.monitor_best_val) or \
+           (self.monitor_regime == "max" and self.monitor_cur_val > self.monitor_best_val):
+            self.early_stopping_cnt = 1
+            self.logger.log(f'Early stopping count reset: {self.early_stopping_cnt - 1}')
+            return False
+        elif self.early_stopping_cnt < self.early_stopping_patience:
+            self.early_stopping_cnt += 1
+            self.logger.log(f'Early stopping count incremented: {self.early_stopping_cnt - 1}')
+            return False
+        else:
+            self.logger.log(f'Early stopping count is {self.early_stopping_cnt} and equal to early stopping patience')
+            self.logger.log(f'Training is stopped early')
+            return True
 
-        pass
+    def _reduce_lr_on_plateau(self, cur_lr):
 
-    def fit(self):
+        if (self.monitor_regime == "min" and self.monitor_cur_val < self.monitor_best_val) or \
+           (self.monitor_regime == "max" and self.monitor_cur_val > self.monitor_best_val):
+            self.reduce_lr_on_plateau_cnt = 1
+            self.logger.log(f'Reduce learning rate on plateau count reset: {self.reduce_lr_on_plateau_cnt - 1}')
+            return cur_lr
+        elif self.reduce_lr_on_plateau_cnt < self.reduce_lr_on_plateau_patience:
+            self.reduce_lr_on_plateau_cnt += 1
+            self.logger.log(f'Reduce learning rate on plateau count incremented: {self.reduce_lr_on_plateau_cnt - 1}')
+            return cur_lr
+        elif cur_lr > self.reduce_lr_on_plateau_min:
+            reduced_lr = cur_lr * self.reduce_lr_on_plateau_factor
+            self.reduce_lr_on_plateau_cnt = 1
+            self.logger.log(f'Learning rate reduced: {reduced_lr}')
+            self.logger.log(f'Reduce learning rate on plateau count reset: {self.reduce_lr_on_plateau_cnt - 1}')
+            return reduced_lr
+        else:
+            return cur_lr
 
-        # self.model.fit(
-        #     x=self.train_sequence,
-        #     epochs=self.epochs,
-        #     callbacks=self._get_callbacks(),
-        #     validation_data=self.val_sequence)
+    def _update_monitor_best_value(self):
+
+        if (self.monitor_regime == "min" and self.monitor_cur_val < self.monitor_best_val) or \
+           (self.monitor_regime == "max" and self.monitor_cur_val > self.monitor_best_val):
+            self.monitor_best_val = self.monitor_cur_val
+
+    @staticmethod
+    def _log_scalar_to_mlops_server(mlops_task, plot_name, curve_name, val, iteration_num):
+
+        if mlops_task is not None:
+            logger = mlops_task.get_logger()
+            logger.report_scalar(plot_name, curve_name, val, iteration=iteration_num)
+
+    def fit(self, fold=0, mlops_task=None):
 
         # Instantiate optimizer
         optimizer = self._get_optimizer()
@@ -299,94 +367,183 @@ class BaseModel(BaseObject):
         loss_fns, loss_weights = self._get_losses()
 
         # Get metrics
-        metrics = self._get_metrics()
+        metric_fns, metrics_num = self._get_metrics()
 
-        # Instantiate history lists
-        batch_loss_history = list()
-        batch_metrics_history = list()
-        epoch_loss_history = list()
-        epoch_metrics_history = list()
+        # Instantiate epoch history lists
+        lr_epoch_history = list()
+        training_epoch_loss_history = tf.zeros([0, len(self.loss_args)])
+        val_epoch_loss_history = tf.zeros([0, len(self.loss_args)])
+        training_epoch_metrics_history = tf.zeros([0, metrics_num])
+        val_epoch_metrics_history = tf.zeros([0, metrics_num])
+
+        # Initialize monitor value
+        if self.monitor_regime == 'min':
+            self.monitor_best_val = np.inf
+        elif self.monitor_regime == 'max':
+            self.monitor_best_val = -np.inf
+        else:
+            self.logger.log(f'Unknown monitoring regime: {self.monitor_regime}, using min regime')
+            self.monitor_regime = 'min'
+            self.monitor_best_val = np.inf
+
+        self.monitor_cur_val = self.monitor_best_val
+
+        # Initialize patience count
+        self.early_stopping_patience = 1
+        self.reduce_lr_on_plateau_patience = 1
 
         # @tf.function
-        def _step(data, labels, cur_epoch):
+        def _step(data, labels, cur_epoch, training):
 
             with tf.GradientTape() as gradient_tape:
 
                 # Forward pass
-                model_output = self.model(data, training=True)
+                model_output = self.model(data, training=training)
 
                 # Calculate loss
-                total_loss = 0
-                int_loss_list = list()
+                batch_loss = 0
+                batch_loss_list = list()
 
-                for int_loss_idx, _ in enumerate(self.loss_args):
-                    loss = loss_fns[int_loss_idx](labels[int_loss_idx], model_output[int_loss_idx], cur_epoch=cur_epoch)
-                    int_loss_list.append(loss)
-                    total_loss += loss * loss_weights[int_loss_idx]
-
-                batch_loss_history.append(int_loss_list)
+                if len(self.loss_args) == 1:
+                    loss = loss_fns[0](tf.cast(tf.convert_to_tensor(labels), dtype=tf.float32), model_output, epoch_num=cur_epoch)
+                    batch_loss_list.append(loss)
+                    batch_loss += loss * loss_weights[0]
+                else:
+                    for int_loss_idx, _ in enumerate(self.loss_args):
+                        loss = loss_fns[int_loss_idx](labels[int_loss_idx], model_output[int_loss_idx], epoch_num=cur_epoch)
+                        batch_loss_list.append(loss)
+                        batch_loss += loss * loss_weights[int_loss_idx]
 
                 # Calculate metrics
+                batch_metric_list = list()
+
+                if len(self.metrics_args) == 1:
+                    for metric_fn in metric_fns[0]:
+                        metric = metric_fn(tf.cast(tf.convert_to_tensor(labels), dtype=tf.float32), model_output, epoch_num=cur_epoch)
+                        batch_metric_list.append(metric)
+
+                else:
+                    for int_output_idx, metric_fns_for_output in metric_fns:
+                        for metric_fn in metric_fns_for_output:
+                            metric = metric_fn(tf.cast(tf.convert_to_tensor(labels[int_output_idx]), dtype=tf.float32), model_output[int_output_idx], epoch_num=cur_epoch)
+                            batch_metric_list.append(metric)
 
             # Backward pass
-            gradients = gradient_tape.gradient(total_loss, self.model.trainable_variables)
-            optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
+            if training:
+                gradients = gradient_tape.gradient(batch_loss, self.model.trainable_variables)
+                optimizer.apply_gradients(zip(gradients, self.model.trainable_variables))
+
+            return batch_loss_list, batch_metric_list
 
         # Epochs loop
         for epoch in range(self.epochs):
 
-            start = time.time()
-            self.logger.log(f'Epoch {epoch}')
+            self.logger.log(f'\nEpoch {epoch}')
+
+            self.logger.log(f'Learning rate = {optimizer.learning_rate.numpy()}')
+            lr_epoch_history.append(optimizer.learning_rate)
+
+            # Log to MLOps Server
+            self._log_scalar_to_mlops_server(mlops_task, f'learning_rate', f'lr_f{fold}', optimizer.learning_rate.numpy(), epoch)
+
+            # Instantiate batch history lists
+            batch_loss_history = tf.zeros([0, len(self.loss_args)])
+            batch_metrics_history = tf.zeros([0, metrics_num])
 
             # Training mini-batches loop
             for batch_data, batch_labels in tqdm(self.train_sequence, desc='Training'):
-                _step(batch_data, batch_labels, epoch)
+                loss_list, metric_list = _step(batch_data, batch_labels, epoch, training=True)
+                batch_loss_history = tf.concat([batch_loss_history, tf.reshape(loss_list, shape=(1, len(self.loss_args)))], axis=0)
+                batch_metrics_history = tf.concat([batch_metrics_history, tf.reshape(metric_list, shape=(1, metrics_num))], axis=0)
 
             # Calculate and log mean training loss for epoch
+            epoch_loss_list = list()
             for loss_idx, loss_args in enumerate(self.loss_args):
-                loss_list = [batch_loss_history[idx][loss_idx] for idx in range(len(self.train_sequence))]
-                mean_loss = tf.math.reduce_mean(loss_list).numpy()
+                batch_mean_single_loss = tf.math.reduce_mean(batch_loss_history[:, loss_idx])
+                epoch_loss_list.append(batch_mean_single_loss)
 
-                epoch_loss_history.append(mean_loss)
-                self.logger.log(f'Training loss {loss_idx} - {loss_args["metric_name"]}: {mean_loss}.4f')
+                self.logger.log(f'Training loss for output {loss_idx} - {loss_args["metric_name"]}: {batch_mean_single_loss.numpy():.4f}')
 
-                # Log to ClearML
+                # Log to MLOps server
+                self._log_scalar_to_mlops_server(mlops_task, f'loss_for_output_{loss_idx}', f'train_{loss_args["metric_name"]}_f{fold}', batch_mean_single_loss.numpy(), epoch)
+
+            training_epoch_loss_history = tf.concat([training_epoch_loss_history, tf.reshape(epoch_loss_list, shape=(1, len(self.loss_args)))], axis=0)
 
             # Calculate and log mean training metrics for epoch
+            epoch_metric_list = list()
+            for output_idx, metrics_args_for_output in enumerate(self.metrics_args):
+                for metric_idx, metric_args in enumerate(metrics_args_for_output):
+                    batch_mean_single_metric = tf.math.reduce_mean(batch_metrics_history[:, output_idx + metric_idx])
+                    epoch_metric_list.append(batch_mean_single_metric)
+
+                    self.logger.log(f'Training metric {metric_idx} for output {output_idx} - {metric_args["metric_name"]}: {batch_mean_single_metric.numpy():.4f}')
+
+                    # Log to MLOps server
+                    self._log_scalar_to_mlops_server(mlops_task, f'metric_{metric_idx}_for_output_{output_idx}', f'train_{metric_args["metric_name"]}_f{fold}', batch_mean_single_metric.numpy(), epoch)
+
+            training_epoch_metrics_history = tf.concat([training_epoch_metrics_history, tf.reshape(epoch_metric_list, shape=(1, metrics_num))], axis=0)
 
             # Zero batch loss and metric history after training mini-batches loop
-            batch_loss_history = list()
-            batch_metrics_history = list()
+            batch_loss_history = tf.zeros([0, len(self.loss_args)])
+            batch_metrics_history = tf.zeros([0, metrics_num])
 
             # Validation mini-batches loop
             for batch_data, batch_labels in tqdm(self.val_sequence, desc="Validation"):
-                _step(batch_data, batch_labels, epoch)
-
-            # Calculate and log mean training loss for epoch
-            for loss_idx, loss_args in enumerate(self.loss_args):
-                loss_list = [batch_loss_history[idx][loss_idx] for idx in range(len(self.train_sequence))]
-                mean_loss = tf.math.reduce_mean(loss_list).numpy()
-
-                epoch_loss_history.append(mean_loss)
-                self.logger.log(f'Validation loss {loss_idx} - {loss_args["metric_name"]}: {mean_loss}.4f')
-
-            # Zero batch loss and metric history after validation mini-batches loop
-            batch_loss_history = list()
-            batch_metrics_history = list()
+                loss_list, metric_list = _step(batch_data, batch_labels, epoch, training=False)
+                batch_loss_history = tf.concat([batch_loss_history, tf.reshape(loss_list, shape=(1, len(self.loss_args)))], axis=0)
+                batch_metrics_history = tf.concat([batch_metrics_history, tf.reshape(metric_list, shape=(1, metrics_num))], axis=0)
 
             # Calculate and log mean validation loss for epoch
+            epoch_loss_list = list()
+            for loss_idx, loss_args in enumerate(self.loss_args):
+                batch_mean_single_loss = tf.math.reduce_mean(batch_loss_history[:, loss_idx])
+                epoch_loss_list.append(batch_mean_single_loss)
+
+                if f'{loss_args["metric_name"]}_loss_{loss_idx}' == self.monitor:
+                    self.monitor_cur_val = batch_mean_single_loss.numpy()
+
+                self.logger.log(f'Validation loss for output {loss_idx} - {loss_args["metric_name"]}: {batch_mean_single_loss.numpy():.4f}')
+
+                # Log to MLOps server
+                self._log_scalar_to_mlops_server(mlops_task, f'loss_for_output_{loss_idx}', f'val_{loss_args["metric_name"]}_f{fold}', batch_mean_single_loss.numpy(), epoch)
+
+            val_epoch_loss_history = tf.concat([val_epoch_loss_history, tf.reshape(epoch_loss_list, shape=(1, len(self.loss_args)))], axis=0)
 
             # Calculate and log mean validation metrics for epoch
+            epoch_metric_list = list()
+            for output_idx, metrics_args_for_output in enumerate(self.metrics_args):
+                for metric_idx, metric_args in enumerate(metrics_args_for_output):
+                    batch_mean_single_metric = tf.math.reduce_mean(batch_metrics_history[:, output_idx + metric_idx])
+                    epoch_metric_list.append(batch_mean_single_metric)
+
+                    if f'{metric_args["metric_name"]}_metric_{output_idx}_{metric_idx}' == self.monitor:
+                        self.monitor_cur_val = batch_mean_single_metric.numpy()
+
+                    self.logger.log(f'Validation metric {metric_idx} for output {output_idx} - {metric_args["metric_name"]}: {batch_mean_single_metric.numpy():.4f}')
+
+                    # Log to MLOps server
+                    self._log_scalar_to_mlops_server(mlops_task, f'metric_{metric_idx}_for_output_{output_idx}', f'val_{metric_args["metric_name"]}_f{fold}', batch_mean_single_metric.numpy(), epoch)
+
+            val_epoch_metrics_history = tf.concat([val_epoch_metrics_history, tf.reshape(epoch_metric_list, shape=(1, metrics_num))], axis=0)
+
+            # Save checkpoint
+            self._checkpoint(epoch)
+
+            # Stop training early
+            if self.use_early_stopping and self._stop_early():
+                break
+
+            # Reduce learning rate on plateau
+            if self.use_reduce_lr_on_plateau:
+                optimizer.learning_rate = self._reduce_lr_on_plateau(optimizer.learning_rate.numpy())
+
+            # Update monitor best value for next epoch
+            self._update_monitor_best_value()
 
     def predict(self, data):
 
         predictions = self.model.predict(np.array(data), batch_size=self.prediction_batch_size, verbose=1)
         return predictions
-
-    def evaluate(self, data, labels):
-
-        results = self.model.evaluate(np.array(data), np.array(labels), batch_size=self.prediction_batch_size, verbose=1)
-        return results
 
     def summary(self):
         self.logger.log("Model Architecture", level=LogLevels.DEBUG, console=True)
