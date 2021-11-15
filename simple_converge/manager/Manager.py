@@ -255,10 +255,6 @@ class Manager(object):
             self.logger.log(f"Train model")
             model.fit(fold=fold, mlops_task=self.mlops_task)
 
-            # Load best weights and save the entire model
-            model.load_weights(self.output_checkpoint_path)
-            model.save_model(os.path.join(fold_output_folder, "model"))
-
             # TODO: upload checkpoint to dedicated storage and write it path to ClearML
 
             # Test model

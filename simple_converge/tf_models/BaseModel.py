@@ -389,10 +389,10 @@ class BaseModel(BaseObject):
         self.monitor_cur_val = self.monitor_best_val
 
         # Initialize patience count
-        self.early_stopping_patience = 1
-        self.reduce_lr_on_plateau_patience = 1
+        self.early_stopping_cnt = 1
+        self.reduce_lr_on_plateau_cnt = 1
 
-        # @tf.function
+        # TODO conditional @tf.function
         def _step(data, labels, cur_epoch, training):
 
             with tf.GradientTape() as gradient_tape:
