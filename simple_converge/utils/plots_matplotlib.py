@@ -202,7 +202,7 @@ def confusion_matrix_plot(confusion_matrix,
     plt.yticks(tick_marks, class_names)
 
     fmt = '.2f' if normalize else 'd'
-    thresh = confusion_matrix.nanmax() / 2.
+    thresh = np.nanmax(confusion_matrix) / 2.
     for i, j in itertools.product(range(confusion_matrix.shape[0]), range(confusion_matrix.shape[1])):
         plt.text(j, i, format(confusion_matrix[i, j], fmt), horizontalalignment="center",
                  color="white" if confusion_matrix[i, j] > thresh else "black")
