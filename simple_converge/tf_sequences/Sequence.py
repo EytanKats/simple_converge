@@ -102,6 +102,8 @@ class Sequence(tf.keras.utils.Sequence, BaseObject):
             self.dataset_df = self.oversample_data(self.dataset_df)
         elif self.subsample:
             self.dataset_df = self.subsample_data(self.dataset_df)
+        elif self.balance:
+            self.dataset_df = self.balance_data(self.dataset_df)
         else:
             self.dataset_df = self.dataset_df.reindex(np.random.permutation(self.dataset_df.index))
 
@@ -182,10 +184,10 @@ class Sequence(tf.keras.utils.Sequence, BaseObject):
 
         return inputs, labels
 
-    def __iter__(self):
+    def __call__(self):
 
         """
-        This method defines iterator on the batches of the data sequence
+        This method defines 'call' method of the sequence to get batch of model inputs and corresponding labels
         :return: batch of inputs and labels
         """
 
