@@ -300,7 +300,6 @@ class Manager(object):
 
             test_data_files_paths = self.settings.manager_args["test_data_files"]
             test_data_files = [load_dataset_file(file_path) for file_path in test_data_files_paths]
-            self.dataset_splitter.set_custom_data_split([], [], test_data_files)
 
             ckpt_paths = self.settings.manager_args["test_ckpt_paths"]
 
