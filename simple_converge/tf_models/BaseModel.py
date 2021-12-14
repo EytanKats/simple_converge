@@ -456,6 +456,9 @@ class BaseModel(BaseObject):
                 batch_loss_history = tf.concat([batch_loss_history, tf.reshape(loss_list, shape=(1, len(self.loss_args)))], axis=0)
                 batch_metrics_history = tf.concat([batch_metrics_history, tf.reshape(metric_list, shape=(1, metrics_num))], axis=0)
 
+            # Apply actions on training data on end of the epoch
+            self.train_sequence.on_epoch_end()
+
             # Calculate and log mean training loss for epoch
             epoch_loss_list = list()
             for loss_idx, loss_args in enumerate(self.loss_args):
@@ -492,6 +495,9 @@ class BaseModel(BaseObject):
                 loss_list, metric_list = _step(batch_data, batch_labels, epoch, training=False)
                 batch_loss_history = tf.concat([batch_loss_history, tf.reshape(loss_list, shape=(1, len(self.loss_args)))], axis=0)
                 batch_metrics_history = tf.concat([batch_metrics_history, tf.reshape(metric_list, shape=(1, metrics_num))], axis=0)
+
+            # Apply actions on validation data on end of the epoch
+            self.val_sequence.on_epoch_end()
 
             # Calculate and log mean validation loss for epoch
             epoch_loss_list = list()
