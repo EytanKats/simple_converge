@@ -2,8 +2,7 @@ import os
 import glob
 import numpy as np
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
+from utils.plots_matplotlib import bar_plot
 
 
 def load_dataset_file(dataset_file_path):
@@ -100,7 +99,7 @@ def analyze_dataset(dataset, save_plots=False, output_plots_dir=""):
 
     groups = dataset["group"].value_counts()
     output_path = os.path.join(output_plots_dir, "groups.png")
-    _bar_plot(groups, save_plots, output_path)
+    bar_plot(groups, save_plots, output_path)
 
     # If dataset doesn't contain the class column - return
     if "class" not in dataset.columns:
@@ -108,7 +107,7 @@ def analyze_dataset(dataset, save_plots=False, output_plots_dir=""):
 
     classes = dataset["class"].value_counts()
     output_path = os.path.join(output_plots_dir, "classes.png")
-    _bar_plot(classes, save_plots, output_path)
+    bar_plot(classes, save_plots, output_path)
 
     group_values = groups.index.values.tolist()
     for group_value in group_values:
@@ -116,14 +115,14 @@ def analyze_dataset(dataset, save_plots=False, output_plots_dir=""):
         group_value_df = dataset[dataset["group"] == group_value]
         classes_for_group = group_value_df["class"].value_counts()
         output_path = os.path.join(output_plots_dir, "group_" + str(group_value) + ".png")
-        _bar_plot(classes_for_group, save_plots, output_path)
+        bar_plot(classes_for_group, save_plots, output_path)
 
     class_values = classes.index.values.tolist()
     for class_value in class_values:
         class_value_df = dataset[dataset["class"] == class_value]
         groups_for_class = class_value_df["group"].value_counts()
         output_path = os.path.join(output_plots_dir, "class_" + str(class_value) + ".png")
-        _bar_plot(groups_for_class, save_plots, output_path)
+        bar_plot(groups_for_class, save_plots, output_path)
 
 
 def analyze_predictions(dataset, save_plots=False, output_dir=""):
@@ -145,78 +144,107 @@ def analyze_predictions(dataset, save_plots=False, output_dir=""):
         group_dataset = dataset[dataset["group"] == group]
         results_for_group = group_dataset["result"].value_counts()
         output_path = os.path.join(output_dir, "group_" + str(group) + ".png")
-        _bar_plot(results_for_group, save_plot=save_plots, output_plot_path=output_path)
+        bar_plot(results_for_group, save_plot=save_plots, output_plot_path=output_path)
 
 
-def _bar_plot(groups, save_plot=False, output_plot_path=""):
+def calculate_folds_statistic(metrics_dfs):
 
-    """
-    This method build bar plot from the pandas series.
-    :param groups: pandas series
-                   index of the series contains x-axis names, values of the series defines height of the bars
-    :param save_plot: if True the plot will be saved
-                       if False the plot will be shown
-    :param output_plot_path: path to save plot
-    :return: None
-    """
+    df_concat = pd.concat(metrics_dfs)
+    df_groupby_index = df_concat.groupby(df_concat.index)
 
-    x = groups.index.values.tolist()
-    y = groups.values.tolist()
+    df_mean = df_groupby_index.mean()
+    df_mean = df_mean.add_suffix('_mean')
 
-    plt.figure()
-    groups_plot = sns.barplot(x=x, y=y)
-    for idx, count in enumerate(y):
-        groups_plot.text(idx, count, count, color="black", ha="center")
+    df_std = df_groupby_index.std()
+    df_std = df_std.add_suffix('_std')
 
-    plt.xticks(range(0, len(x)), x, rotation="vertical")
-    plt.tight_layout()  # this prevents clipping of bar names
-    if save_plot:
-        plt.savefig(output_plot_path)
-    else:
-        plt.show()
+    df_statistic = pd.concat((df_mean, df_std), axis=1)
 
-    plt.close()
+    return df_statistic
 
 
-def rle_to_mask(rle_encoding, shape):
+def subsample(dataframe, sampling_column):
 
     """
-    This method converts RLE encoding to binary mask
-    :param rle_encoding: string RLE encoding
-    :param shape: shape of the mask
-    :return: binary mask
+    Subsample dataframe so that each unique value of the sampling_column will have
+    a number of occurrences equal to the number of occurrences of the smallest one in the dataframe.
+    :param dataframe: dataframe.
+    :param sampling_column: column of the dataframe that contains unique values according to which the dataframe
+    will be sampled.
+    :return: subsampled dataframe
     """
 
-    segments = rle_encoding.split()
-    flatten_mask = np.zeros(shape[1] * shape[0], dtype=np.uint8)
-    for idx in range(len(segments) // 2):
-        start = int(segments[2 * idx]) - 1
-        length = int(segments[2 * idx + 1])
-        flatten_mask[start: start + length] = 1
+    # Find number of samples in the smallest class
+    unique_values = dataframe[sampling_column].unique()
+    rows_cnt = []
+    for value in unique_values:
+        value_info = dataframe.loc[dataframe[sampling_column] == value]
+        rows_cnt.append(value_info.shape[0])
+    min_count = np.min(rows_cnt)
 
-    mask = flatten_mask.reshape((shape[1], shape[0]))
-    return mask.T
+    # Subsample equal number of samples from all the classes
+    subsampled_dataset_df = pd.DataFrame()
+    for value in unique_values:
+        value_info = dataframe.loc[dataframe[sampling_column] == value]
+        value_info_subsampled = value_info.sample(n=min_count)
+        subsampled_dataset_df = subsampled_dataset_df.append(value_info_subsampled)
+
+    return subsampled_dataset_df
 
 
-def mask_to_rle(mask):
+def oversample(dataframe, sampling_column):
 
     """
-    This method converts RLE encoding to binary mask
-    :param mask: binary mask
-    :return: string RLE encoding
+    Oversample dataframe so that each unique value of the sampling_column will have
+    a number of occurrences equal to the number of occurrences of the largest one in the dataframe.
+    :param dataframe: dataframe.
+    :param sampling_column: column of the dataframe that contains unique values according to which the dataframe
+    will be sampled.
+    :return: oversampled dataframe.
     """
 
-    flatten_mask = mask.T.flatten()
-    binary_flatten_mask = (flatten_mask > 0).astype(np.int8)
-    padded_flatten_mask = np.concatenate([[0], binary_flatten_mask, [0]])
+    # Find number of samples in the largest class
+    unique_values = dataframe[sampling_column].unique()
+    rows_cnt = []
+    for value in unique_values:
+        value_info = dataframe.loc[dataframe[sampling_column] == value]
+        rows_cnt.append(value_info.shape[0])
+    max_count = np.max(rows_cnt)
 
-    start_end_indices = np.where(padded_flatten_mask[1:] != padded_flatten_mask[:-1])[0] + 1
-    start_indices = start_end_indices[::2]
-    lengths = start_end_indices[1::2] - start_end_indices[::2]
+    # Oversample equal number of samples from all the classes
+    oversampled_dataset_df = pd.DataFrame()
+    for value in unique_values:
+        value_info = dataframe.loc[dataframe[sampling_column] == value]
+        value_info_oversampled = value_info.sample(n=max_count, replace=True)
+        oversampled_dataset_df = oversampled_dataset_df.append(value_info_oversampled)
 
-    rle_encoding = ""
-    for start_idx, length in zip(start_indices, lengths):
-        rle_encoding = " ".join([rle_encoding, str(start_idx)])
-        rle_encoding = " ".join([rle_encoding, str(length)])
+    oversampled_dataset_df = oversampled_dataset_df.reset_index(drop=True)  # prevent duplicate indexes
 
-    return rle_encoding
+    return oversampled_dataset_df
+
+
+def balance(dataframe, sampling_column, samples_num, replace=True):
+
+    """
+    Balance dataframe so that each unique value of the sampling_column will have a number of occurrences
+    equal to samples_num.
+    :param dataframe: dataframe.
+    :param sampling_column: column of the dataframe that contains unique values according to which the dataframe
+    will be sampled.
+    :param samples_num: number of occurrences to sample for each unique value in sampling_column.
+    :param replace: if True sampling will be done with replacement, else without replacement.
+    :return: balanced dataframe.
+    """
+
+    unique_values = dataframe[sampling_column].unique()
+
+    # Sample equal number of samples from all the classes
+    balanced_dataset_df = pd.DataFrame()
+    for value in unique_values:
+        value_info = dataframe.loc[samples_num[sampling_column] == value]
+        value_info_balanced = value_info.sample(n=samples_num, replace=replace)
+        balanced_dataset_df = balanced_dataset_df.append(value_info_balanced)
+
+    balanced_dataset_df = balanced_dataset_df.reset_index(drop=True)  # prevent duplicate indexes
+
+    return balanced_dataset_df

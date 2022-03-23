@@ -1,112 +1,6 @@
 import numpy as np
-from simple_converge.utils.constants import EPSILON
-
-
-def accuracy(predictions, ground_truth):
-
-    """
-    This method calculates accuracy metric between predictions and ground truth values
-    :param predictions: predictions (1D array)
-    :param ground_truth: ground truth values (1D array)
-    :return: accuracy score
-    """
-
-    true_predicted_classes = np.equal(predictions, ground_truth)
-    _accuracy = np.sum(true_predicted_classes) / len(ground_truth)
-
-    return _accuracy
-
-
-def kappa(predictions, ground_truth):
-
-    """
-    This method calculates kappa metric https://en.wikipedia.org/wiki/Cohen%27s_kappa
-     between predictions and ground truth values
-    :param predictions: predictions (1D array)
-    :param ground_truth: ground truth values (1D array)
-    :return: kappa score
-    """
-
-    agreement = accuracy(predictions, ground_truth)
-
-    # Calculate random agreement
-    random_agreement = 0
-    unique_prediction_classes = np.unique(predictions)
-    for unique_prediction in unique_prediction_classes:
-        predictions_num_for_class = np.sum(predictions == unique_prediction) / len(predictions)
-        ground_truth_num_for_class = np.sum(ground_truth == unique_prediction) / len(ground_truth)
-        random_agreement = random_agreement + predictions_num_for_class * ground_truth_num_for_class
-
-    if agreement <= random_agreement:
-        _kappa = 0
-    else:
-        _kappa = (agreement - random_agreement + np.finfo(float).eps) / (1 - random_agreement + np.finfo(float).eps)
-
-    return _kappa
-
-
-def iou(predictions, ground_truth):
-
-    """
-    This method calculates iou (jaccard) metric between predictions and ground truth
-    :param predictions: model predictions
-    :param ground_truth: ground truth
-    :return: iou score
-    """
-
-    numerator = np.sum(predictions * ground_truth)
-    denominator = np.sum(predictions) + np.sum(ground_truth) - numerator
-    iou_score = (numerator + EPSILON) / (denominator + EPSILON)
-
-    return iou_score
-
-
-def dice(predictions, ground_truth):
-
-    """
-    This method calculates dice metric between predictions and ground truth
-    :param predictions: model predictions
-    :param ground_truth: ground truth
-    :return: dice score
-    """
-
-    numerator = 2.0 * np.sum(predictions * ground_truth)
-    denominator = np.sum(predictions) + np.sum(ground_truth)
-    dice_score = (numerator + EPSILON) / (denominator + EPSILON)
-
-    return dice_score
-
-
-def recall(predictions, ground_truth):
-
-    """
-    This method calculates recall metric between predictions and ground truth
-    :param predictions: model predictions
-    :param ground_truth: ground truth
-    :return: recall score
-    """
-
-    numerator = np.sum(predictions * ground_truth)
-    denominator = np.sum(ground_truth)
-    recall_score = (numerator + EPSILON) / (denominator + EPSILON)
-
-    return recall_score
-
-
-def precision(predictions, ground_truth):
-
-    """
-    This method calculates precision metric between predictions and ground truth
-    :param predictions: model predictions
-    :param ground_truth: ground truth
-    :return: precision score
-    """
-
-    numerator = np.sum(predictions * ground_truth)
-    denominator = np.sum(predictions)
-    precision_score = (numerator + EPSILON) / (denominator + EPSILON)
-
-    return precision_score
+from sklearn import metrics as skl_metrics
+from imblearn import metrics as imb_metrics
 
 
 def contrast_ratio(target, background):
@@ -165,13 +59,74 @@ def signal_to_noise_ratio(data):
     return ratio
 
 
-def normalized_confusion_matrix(confusion_matrix):
+def categorical_classification_metrics(
+        predicted_labels,
+        gt_labels,
+        predicted_probs
+):
 
-    """
-    This method normalizes confusion matrix
-    :param confusion_matrix: confusion matrix (2D array)
-    :return: normalized confusion matrix
-    """
+    auc_list = list()
+    acc_list = list()
+    sens_list = list()
+    spec_list = list()
+    prec_list = list()
+    f1_list = list()
 
-    _normalized_confusion_matrix = confusion_matrix.astype('float') / confusion_matrix.sum(axis=1)[:, np.newaxis]
-    return _normalized_confusion_matrix
+    num_of_classes = len(predicted_labels[0])
+    for i in range(num_of_classes):
+        auc_list.append(skl_metrics.roc_auc_score(y_true=gt_labels[:, i], y_score=predicted_probs[:, i]))
+        acc_list.append(skl_metrics.accuracy_score(y_true=gt_labels[:, i], y_pred=predicted_labels[:, i]))
+        sens_list.append(imb_metrics.sensitivity_score(y_true=gt_labels[:, i], y_pred=predicted_labels[:, i]))
+        spec_list.append(imb_metrics.specificity_score(y_true=gt_labels[:, i], y_pred=predicted_labels[:, i]))
+        prec_list.append(skl_metrics.precision_score(y_true=gt_labels[:, i], y_pred=predicted_labels[:, i]))
+        f1_list.append(skl_metrics.f1_score(y_true=gt_labels[:, i], y_pred=predicted_labels[:, i]))
+
+    res = {
+        'auc': auc_list,
+        'acc': acc_list,
+        'sens': sens_list,
+        'spec': spec_list,
+        'prec': prec_list,
+        'f1': f1_list
+    }
+
+    return res
+
+
+def metric_vs_discarded_samples(
+        metric,
+        predicted_labels,
+        gt_labels,
+        predicted_probs,
+        relevant_indices=None,  # percentage of discarded samples will be calculated relatively to this indices
+        confidence_thr_list=np.linspace(0, 1, num=1001)
+):
+
+    score_list = []
+    discarded_list = []
+    for confidence_thr in confidence_thr_list:
+        max_prob = np.max(predicted_probs, axis=1)
+        not_confident_idxs = list(np.where(max_prob < confidence_thr)[0])
+        confident_predicted_labels = np.delete(predicted_labels, not_confident_idxs, axis=0)
+        confident_gt_labels = np.delete(gt_labels, not_confident_idxs, axis=0)
+
+        if relevant_indices is None:
+            discarded = (len(not_confident_idxs) / len(max_prob)) * 100
+        else:
+            relevant_max_prob = max_prob[relevant_indices]
+            relevant_not_confident_idxs = list(np.where(relevant_max_prob < confidence_thr)[0])
+            discarded = (len(relevant_not_confident_idxs) / len(relevant_max_prob)) * 100
+
+        if discarded < 100:
+            score = metric(confident_gt_labels, confident_predicted_labels)
+        else:
+            score = 1
+
+        discarded_list.append(discarded)
+        score_list.append(score)
+
+    interp_discarded = np.linspace(0, 100, num=101)
+    interp_score = np.interp(interp_discarded, discarded_list, score_list)
+    interp_conf = np.interp(interp_discarded, discarded_list, confidence_thr_list)
+
+    return interp_score, interp_conf, interp_discarded

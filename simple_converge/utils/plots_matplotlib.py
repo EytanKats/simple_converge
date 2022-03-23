@@ -1,13 +1,9 @@
-import os
 import pathlib
 import itertools
-
 import numpy as np
-import pandas as pd
+import seaborn as sns
 import matplotlib.pyplot as plt
 from skimage import color as ski_color
-
-from simple_converge.utils import metrics
 
 
 def line_plot(x_points,
@@ -70,63 +66,6 @@ def line_plot(x_points,
     plt.close()
 
 
-def training_plot(training_log_path,
-                  metrics_to_plot,
-                  x_lim=None,
-                  y_lim=None,
-                  show=False,
-                  output_folder="",
-                  fig_size=(10, 5.5),
-                  mlops_task=None):
-
-    """
-    This method draws line plots for each metric specified in training log file
-    :param training_log_path: path to CSV log file that contains training metrics
-    :param metrics_to_plot: list of training metrics to plot; for training metric with name 'metric'
-     corresponding validation metric expected to has name 'val_metric'
-    :param x_lim: maximum x value to show on plot
-    :param y_lim: maximum y value to show on plot
-    :param show: if True plot will be shown, if False plot will be saved
-    :param output_folder: folder path to save the plot
-    :param fig_size: size of the plot
-    :param mlops_task: ClearML Task object that is used to save the plot into experiments management framework
-    :return: None
-    """
-
-    df = pd.read_csv(training_log_path)
-
-    epochs = df["epoch"]
-    for idx, metric in enumerate(metrics_to_plot):
-        train_metrics = df[metric]
-        val_metrics = df["val_" + metric]
-
-        ax_acc = plt.figure(figsize=fig_size)
-        ax_acc.set_facecolor("gainsboro")
-        plt.title(metric)
-        plt.grid(True)
-        plt.xlabel("epochs")
-        plt.ylabel(metric)
-
-        if x_lim is not None:
-            plt.xlim(x_lim[idx])
-        if y_lim is not None:
-            plt.ylim(y_lim[idx])
-
-        plt.plot(epochs, train_metrics, 'b', label="training")
-        plt.plot(epochs, val_metrics, 'r', label="validation")
-        plt.legend(loc="best")
-
-        if mlops_task:
-            mlops_logger = mlops_task.get_logger()
-            mlops_logger.report_matplotlib_figure(title=metric, series=metric, figure=ax_acc, report_image=True)
-
-        if show:
-            plt.show()
-        else:
-            plt.savefig(os.path.join(output_folder, metric + ".png"))
-        plt.close()
-
-
 def roc_plot(fpr,
              tpr,
              thr,
@@ -187,11 +126,9 @@ def confusion_matrix_plot(confusion_matrix,
     :param output_path: path to save the plot
     :param fig_size: size of the plot
     :param mlops_task: ClearML Task object that is used to save the plot into experiments management framework
+    :param mlops_iteration: iteration number for witch plot will be registered on MLOps server
     :return: None
     """
-
-    if normalize:
-        confusion_matrix = metrics.normalized_confusion_matrix(confusion_matrix)
 
     fig = plt.figure(figsize=fig_size)
     plt.imshow(confusion_matrix, interpolation='nearest', cmap=cmap)
@@ -273,10 +210,10 @@ def side_by_side_images_plot(images,
     :return: None
     """
 
-    f, axarr = plt.subplots(1, len(images), figsize=fig_size)
+    f, ax_arr = plt.subplots(1, len(images), figsize=fig_size)
     for img_idx in range(len(images)):
-        axarr[img_idx].imshow(images[img_idx], cmap=cmap)
-        axarr[img_idx].set_title(titles[img_idx])
+        ax_arr[img_idx].imshow(images[img_idx], cmap=cmap)
+        ax_arr[img_idx].set_title(titles[img_idx])
 
     if show:
         plt.show()
@@ -301,13 +238,13 @@ def center_slices_volume_plot(volume,
     :return: None
     """
 
-    f, axarr = plt.subplots(1, 3, figsize=fig_size)
-    axarr[0].imshow(volume[int(volume.shape[0] / 2), :, :], cmap=cmap)
-    axarr[0].set_title('Axial')
-    axarr[1].imshow(volume[:, int(volume.shape[1] / 2), :], cmap=cmap)
-    axarr[1].set_title('Coronal')
-    axarr[2].imshow(volume[:, :, int(volume.shape[2] / 2)], cmap=cmap)
-    axarr[2].set_title('Sagittal')
+    f, ax_arr = plt.subplots(1, 3, figsize=fig_size)
+    ax_arr[0].imshow(volume[int(volume.shape[0] / 2), :, :], cmap=cmap)
+    ax_arr[0].set_title('Axial')
+    ax_arr[1].imshow(volume[:, int(volume.shape[1] / 2), :], cmap=cmap)
+    ax_arr[1].set_title('Coronal')
+    ax_arr[2].imshow(volume[:, :, int(volume.shape[2] / 2)], cmap=cmap)
+    ax_arr[2].set_title('Sagittal')
 
     if show:
         plt.show()
@@ -363,3 +300,32 @@ def overlay_plot(image,
         plt.savefig(output_path)
     plt.close()
 
+
+def bar_plot(groups, save_plot=False, output_plot_path=""):
+
+    """
+    This method build bar plot from the pandas series.
+    :param groups: pandas series
+                   index of the series contains x-axis names, values of the series defines height of the bars
+    :param save_plot: if True the plot will be saved
+                       if False the plot will be shown
+    :param output_plot_path: path to save plot
+    :return: None
+    """
+
+    x = groups.index.values.tolist()
+    y = groups.values.tolist()
+
+    plt.figure()
+    groups_plot = sns.barplot(x=x, y=y)
+    for idx, count in enumerate(y):
+        groups_plot.text(idx, count, count, color="black", ha="center")
+
+    plt.xticks(range(0, len(x)), x, rotation="vertical")
+    plt.tight_layout()  # this prevents clipping of bar names
+    if save_plot:
+        plt.savefig(output_plot_path)
+    else:
+        plt.show()
+
+    plt.close()

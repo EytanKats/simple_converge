@@ -1,44 +1,6 @@
 import cv2
 
 
-def resize(image, shape, interpolation=cv2.INTER_LINEAR):
-
-    """
-    This method resizes image
-    :param image: image to process
-    :param shape: new shape of the image: (width, height)
-    :param interpolation: interpolation method (default: linear)
-    :return: resized image
-    """
-
-    processed_image = cv2.resize(image, shape, interpolation=interpolation)
-    return processed_image
-
-
-def flip_lr(image):
-
-    """
-    This method flips image horizontally
-    :param image: image to process
-    :return: flipped image
-    """
-
-    processed_image = cv2.flip(image, flipCode=1)
-    return processed_image
-
-
-def flip_ud(image):
-
-    """
-    This method flips image vertically
-    :param image: image to process
-    :return: flipped image
-    """
-
-    processed_image = cv2.flip(image, flipCode=0)
-    return processed_image
-
-
 def rotate(image, angle, interpolation=cv2.INTER_LINEAR):
 
     """

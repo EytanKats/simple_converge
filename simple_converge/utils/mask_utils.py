@@ -124,3 +124,47 @@ def get_largest_internal_rectangle(mask):
                     largest_rectangle = (area, [r - dh, c - min_w + 1, r, c])
 
     return largest_rectangle
+
+
+def rle_to_mask(rle_encoding, shape):
+
+    """
+    This method converts RLE encoding to binary mask
+    :param rle_encoding: string RLE encoding
+    :param shape: shape of the mask
+    :return: binary mask
+    """
+
+    segments = rle_encoding.split()
+    flatten_mask = np.zeros(shape[1] * shape[0], dtype=np.uint8)
+    for idx in range(len(segments) // 2):
+        start = int(segments[2 * idx]) - 1
+        length = int(segments[2 * idx + 1])
+        flatten_mask[start: start + length] = 1
+
+    mask = flatten_mask.reshape((shape[1], shape[0]))
+    return mask.T
+
+
+def mask_to_rle(mask):
+
+    """
+    This method converts RLE encoding to binary mask
+    :param mask: binary mask
+    :return: string RLE encoding
+    """
+
+    flatten_mask = mask.T.flatten()
+    binary_flatten_mask = (flatten_mask > 0).astype(np.int8)
+    padded_flatten_mask = np.concatenate([[0], binary_flatten_mask, [0]])
+
+    start_end_indices = np.where(padded_flatten_mask[1:] != padded_flatten_mask[:-1])[0] + 1
+    start_indices = start_end_indices[::2]
+    lengths = start_end_indices[1::2] - start_end_indices[::2]
+
+    rle_encoding = ""
+    for start_idx, length in zip(start_indices, lengths):
+        rle_encoding = " ".join([rle_encoding, str(start_idx)])
+        rle_encoding = " ".join([rle_encoding, str(length)])
+
+    return rle_encoding
