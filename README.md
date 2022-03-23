@@ -1,2 +1,2 @@
 # Simple Converge
-Framework for configurable training of DL models
+Utilities for faster and easier prototyping of DL models
