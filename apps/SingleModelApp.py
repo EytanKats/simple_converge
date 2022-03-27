@@ -2,6 +2,7 @@ import torch
 from loguru import logger
 from apps.BaseSingleModelApp import BaseSingleModelApp
 
+
 default_settings = {
     'epochs': None,
     'monitor': 'not_defined',
@@ -44,9 +45,6 @@ class SingleModelApp(BaseSingleModelApp):
         
         super(SingleModelApp, self).__init__(
             settings,
-            model,
-            optimizer,
-            scheduler,
             loss_fns,
             loss_weights,
             loss_names,
@@ -55,25 +53,39 @@ class SingleModelApp(BaseSingleModelApp):
             metric_num
         )
 
+        self.model = model
+        self.optimizer = optimizer
+        self.scheduler = scheduler
+
         self.ckpt_cnt = 0
         self.latest_ckpt_path = None
 
-    def _get_latest_ckpt(self):
-        return self.latest_ckpt_path
+    def restore_ckpt(self, ckpt_path=''):
+        if ckpt_path:
+            path_to_restore = ckpt_path
+        else:
+            path_to_restore = self.latest_ckpt_path
 
-    def _restore_ckpt(self, ckpt_path):
+        logger.info(f'Restore checkpoint {path_to_restore}')
         self.model.load_state_dict(torch.load(ckpt_path))
 
-    def _save_ckpt(self, ckpt_path):
+    def save_ckpt(self, ckpt_path):
         self.latest_ckpt_path = ckpt_path + '-' + str(self.ckpt_cnt) + '.pth'
         self.ckpt_cnt += 1
         torch.save(self.model.state_dict(), self.latest_ckpt_path)
 
-    def _get_current_lr(self):
+    def get_lr(self):
         for param_group in self.optimizer.param_groups:
             return param_group['lr']
 
-    def _step(self, data, labels, training):
+    def set_lr(self, lr):
+        self.optimizer.learning_rate = lr
+
+    def apply_scheduler(self):
+        if self.scheduler is not None:
+            self.scheduler.step()
+
+    def step(self, data, labels, training):
 
         if training:
             self.model.train()

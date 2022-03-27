@@ -1,8 +1,7 @@
 import abc
 import numpy as np
-from loguru import logger
-
 from tqdm import tqdm
+from loguru import logger
 
 
 default_settings = {
@@ -29,9 +28,6 @@ class BaseSingleModelApp(abc.ABC):
     def __init__(
             self,
             settings,
-            model,
-            optimizer,
-            scheduler,
             loss_fns,
             loss_weights,
             loss_names,
@@ -47,12 +43,9 @@ class BaseSingleModelApp(abc.ABC):
         
         self.settings = settings
 
-        self.model = model
         self.loss_fns = loss_fns
         self.loss_names = loss_names
         self.loss_weights = loss_weights
-        self.optimizer = optimizer
-        self.scheduler = scheduler
         self.metric_fns = metric_fns
         self.metric_names = metric_names
         self.metric_num = metric_num
@@ -64,32 +57,26 @@ class BaseSingleModelApp(abc.ABC):
         self.reduce_lr_on_plateau_cnt = 0
 
     @abc.abstractmethod
-    def _get_latest_ckpt(self):
+    def save_ckpt(self, ckpt_path):
         pass
 
     @abc.abstractmethod
-    def _restore_ckpt(self, ckpt_path):
+    def restore_ckpt(self, ckpt_path=''):
         pass
 
     @abc.abstractmethod
-    def _save_ckpt(self, ckpt_path):
+    def get_lr(self):
         pass
 
     @abc.abstractmethod
-    def _get_current_lr(self):
+    def set_lr(self, lr):
         pass
 
-    def restore(self, ckpt_path='', latest=False):
+    @abc.abstractmethod
+    def apply_scheduler(self):
+        pass
 
-        if latest:
-            path_to_restore = self._get_latest_ckpt()
-        else:
-            path_to_restore = ckpt_path
-
-        logger.info(f'Restore checkpoint {path_to_restore}')
-        self._restore_ckpt(path_to_restore)
-
-    def _checkpoint(self, epoch, ckpt_path):
+    def create_checkpoint(self, epoch, ckpt_path):
 
         if epoch % self.settings['ckpt_freq'] != 0:
             return
@@ -97,13 +84,13 @@ class BaseSingleModelApp(abc.ABC):
         if (self.settings['monitor_regime'] == "min" and self.monitor_cur_val < self.monitor_best_val) or \
            (self.settings['monitor_regime'] == "max" and self.monitor_cur_val > self.monitor_best_val):
             self.ckpt_best_epoch = epoch
-            self._save_ckpt(ckpt_path)
+            self.save_ckpt(ckpt_path)
             logger.info(f'Checkpoint saved for epoch {epoch}, {self.settings["monitor"]} = {self.monitor_cur_val:.4f}')
         elif not self.settings['ckpt_save_best_only']:
-            self._save_ckpt(ckpt_path)
+            self.save_ckpt(ckpt_path)
             logger.info(f'Checkpoint saved for epoch {epoch}')
 
-    def _stop_early(self):
+    def stop_early(self):
 
         if (self.settings['monitor_regime'] == "min" and self.monitor_cur_val < self.monitor_best_val) or \
            (self.settings['monitor_regime'] == "max" and self.monitor_cur_val > self.monitor_best_val):
@@ -119,7 +106,7 @@ class BaseSingleModelApp(abc.ABC):
             logger.info(f'Training is stopped early')
             return True
 
-    def _reduce_lr_on_plateau(self, cur_lr):
+    def reduce_lr_on_plateau(self, cur_lr):
 
         if (self.settings['monitor_regime'] == "min" and self.monitor_cur_val < self.monitor_best_val) or \
            (self.settings['monitor_regime'] == "max" and self.monitor_cur_val > self.monitor_best_val):
@@ -139,7 +126,7 @@ class BaseSingleModelApp(abc.ABC):
         else:
             return cur_lr
 
-    def _update_monitor_best_value(self):
+    def update_monitor_best_value(self):
 
         if (self.settings['monitor_regime'] == "min" and self.monitor_cur_val < self.monitor_best_val) or \
            (self.settings['monitor_regime'] == "max" and self.monitor_cur_val > self.monitor_best_val):
@@ -153,7 +140,7 @@ class BaseSingleModelApp(abc.ABC):
             mlops_logger.report_scalar(plot_name, curve_name, val, iteration=iteration_num)
 
     @abc.abstractmethod
-    def _step(self, data, labels, training):
+    def step(self, data, labels, training):
         pass
 
     def fit(self, train_data_loader, val_data_loader, ckpt_path, fold=0, mlops_task=None):
@@ -189,7 +176,7 @@ class BaseSingleModelApp(abc.ABC):
 
             logger.info(f'\nEpoch {epoch}')
 
-            current_lr = self._get_current_lr()
+            current_lr = self.get_lr()
             logger.info(f'Learning rate = {current_lr}')
             lr_epoch_history.append(current_lr)
 
@@ -202,7 +189,7 @@ class BaseSingleModelApp(abc.ABC):
 
             # Training mini-batches loop
             for batch_data, batch_labels, _ in tqdm(train_data_loader, desc='Training'):
-                loss_list, metric_list = self._step(batch_data, batch_labels, training=True)
+                loss_list, metric_list = self.step(batch_data, batch_labels, training=True)
                 batch_loss_history = np.concatenate([batch_loss_history, np.reshape(loss_list, newshape=(1, len(self.loss_fns)))], axis=0)
                 batch_metrics_history = np.concatenate([batch_metrics_history, np.reshape(metric_list, newshape=(1, self.metric_num))], axis=0)
 
@@ -239,7 +226,7 @@ class BaseSingleModelApp(abc.ABC):
 
             # Validation mini-batches loop
             for batch_data, batch_labels, _ in tqdm(val_data_loader, desc="Validation"):
-                loss_list, metric_list = self._step(batch_data, batch_labels, training=False)
+                loss_list, metric_list = self.step(batch_data, batch_labels, training=False)
                 batch_loss_history = np.concatenate([batch_loss_history, np.reshape(loss_list, newshape=(1, len(self.loss_fns)))], axis=0)
                 batch_metrics_history = np.concatenate([batch_metrics_history, np.reshape(metric_list, newshape=(1, self.metric_num))], axis=0)
 
@@ -277,22 +264,22 @@ class BaseSingleModelApp(abc.ABC):
             val_epoch_metrics_history = np.concatenate([val_epoch_metrics_history, np.reshape(epoch_metric_list, newshape=(1, self.metric_num))], axis=0)
 
             # Save checkpoint
-            self._checkpoint(epoch, ckpt_path)
+            self.create_checkpoint(epoch, ckpt_path)
 
             # Stop training early
-            if self.settings['use_early_stopping'] and self._stop_early():
+            if self.settings['use_early_stopping'] and self.stop_early():
                 break
 
             # Reduce learning rate on plateau
             if self.settings['use_reduce_lr_on_plateau']:
-                self.optimizer.learning_rate = self._reduce_lr_on_plateau(self.optimizer.learning_rate.numpy())
+                reduced_lr = self.reduce_lr_on_plateau(self.get_lr())
+                self.set_lr(reduced_lr)
 
             # Adjust learning rate
-            if self.scheduler is not None:
-                self.scheduler.step()
+            self.apply_scheduler()
 
             # Update monitor best value for next epoch
-            self._update_monitor_best_value()
+            self.update_monitor_best_value()
 
     @abc.abstractmethod
     def predict(self, data):

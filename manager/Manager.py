@@ -154,7 +154,7 @@ class Manager(object):
             if postprocessor is not None and test_data_loaders is not None:
 
                 logger.info(f'Evaluate model.')
-                app.restore(latest=True)
+                app.restore()
                 self.predict_fold(
                     app,
                     postprocessor,
