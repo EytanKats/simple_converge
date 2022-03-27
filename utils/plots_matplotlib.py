@@ -149,10 +149,8 @@ def confusion_matrix_plot(confusion_matrix,
 
     plt.tight_layout()
 
-    if mlops_task:
-        title = pathlib.Path(output_path).stem
-        mlops_logger = mlops_task.get_logger()
-        mlops_logger.report_matplotlib_figure(title=title, series=title, iteration=mlops_iteration, figure=fig, report_image=True)
+    title = pathlib.Path(output_path).stem
+    mlops_task.report_matplotlib_figure(figure=fig, title=title, iteration=mlops_iteration)
 
     if show:
         plt.show()

@@ -132,13 +132,6 @@ class BaseSingleModelApp(abc.ABC):
            (self.settings['monitor_regime'] == "max" and self.monitor_cur_val > self.monitor_best_val):
             self.monitor_best_val = self.monitor_cur_val
 
-    @staticmethod
-    def _log_scalar_to_mlops_server(mlops_task, plot_name, curve_name, val, iteration_num):
-
-        if mlops_task is not None:
-            mlops_logger = mlops_task.get_logger()
-            mlops_logger.report_scalar(plot_name, curve_name, val, iteration=iteration_num)
-
     @abc.abstractmethod
     def step(self, data, labels, training):
         pass
@@ -181,7 +174,7 @@ class BaseSingleModelApp(abc.ABC):
             lr_epoch_history.append(current_lr)
 
             # Log to MLOps Server
-            self._log_scalar_to_mlops_server(mlops_task, f'learning_rate', f'lr_f{fold}', current_lr, epoch)
+            mlops_task.log_scalar_to_mlops_server(f'learning_rate', f'lr_f{fold}', current_lr, epoch)
 
             # Instantiate batch history lists
             batch_loss_history = np.zeros([0, len(self.loss_fns)])
@@ -202,7 +195,7 @@ class BaseSingleModelApp(abc.ABC):
                 logger.info(f'Training loss for output {loss_idx} - {loss_name}: {batch_mean_single_loss:.4f}')
 
                 # Log to MLOps server
-                self._log_scalar_to_mlops_server(mlops_task, f'loss_for_output_{loss_idx}', f'train_{loss_name}_f{fold}', batch_mean_single_loss, epoch)
+                mlops_task.log_scalar_to_mlops_server(f'loss_for_output_{loss_idx}', f'train_{loss_name}_f{fold}', batch_mean_single_loss, epoch)
 
             training_epoch_loss_history = np.concatenate([training_epoch_loss_history, np.reshape(epoch_loss_list, newshape=(1, len(self.loss_fns)))], axis=0)
 
@@ -216,7 +209,7 @@ class BaseSingleModelApp(abc.ABC):
                     logger.info(f'Training metric {metric_idx} for output {output_idx} - {metric_name}: {batch_mean_single_metric:.4f}')
 
                     # Log to MLOps server
-                    self._log_scalar_to_mlops_server(mlops_task, f'metric_{metric_idx}_for_output_{output_idx}', f'train_{metric_name}_f{fold}', batch_mean_single_metric, epoch)
+                    mlops_task.log_scalar_to_mlops_server(f'metric_{metric_idx}_for_output_{output_idx}', f'train_{metric_name}_f{fold}', batch_mean_single_metric, epoch)
 
             training_epoch_metrics_history = np.concatenate([training_epoch_metrics_history, np.reshape(epoch_metric_list, newshape=(1, self.metric_num))], axis=0)
 
@@ -242,7 +235,7 @@ class BaseSingleModelApp(abc.ABC):
                 logger.info(f'Validation loss for output {loss_idx} - {loss_name}: {batch_mean_single_loss:.4f}')
 
                 # Log to MLOps server
-                self._log_scalar_to_mlops_server(mlops_task, f'loss_for_output_{loss_idx}', f'val_{loss_name}_f{fold}', batch_mean_single_loss, epoch)
+                mlops_task.log_scalar_to_mlops_server(f'loss_for_output_{loss_idx}', f'val_{loss_name}_f{fold}', batch_mean_single_loss, epoch)
 
             val_epoch_loss_history = np.concatenate([val_epoch_loss_history, np.reshape(epoch_loss_list, newshape=(1, len(self.loss_fns)))], axis=0)
 
@@ -259,7 +252,7 @@ class BaseSingleModelApp(abc.ABC):
                     logger.info(f'Validation metric {metric_idx} for output {output_idx} - {metric_name}: {batch_mean_single_metric:.4f}')
 
                     # Log to MLOps server
-                    self._log_scalar_to_mlops_server(mlops_task, f'metric_{metric_idx}_for_output_{output_idx}', f'val_{metric_name}_f{fold}', batch_mean_single_metric, epoch)
+                    mlops_task.log_scalar_to_mlops_server(f'metric_{metric_idx}_for_output_{output_idx}', f'val_{metric_name}_f{fold}', batch_mean_single_metric, epoch)
 
             val_epoch_metrics_history = np.concatenate([val_epoch_metrics_history, np.reshape(epoch_metric_list, newshape=(1, self.metric_num))], axis=0)
 

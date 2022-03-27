@@ -54,4 +54,20 @@ class MLOpsTask(object):
         return self._task
 
     def log_configuration(self, config_dict, name):
-        self.task.connect(config_dict, name)
+        if self.task:
+            self.task.connect(config_dict, name)
+
+    def log_scalar_to_mlops_server(self, plot_name, curve_name, val, iteration_num):
+        if self.task:
+            logger = self.task.get_logger()
+            logger.report_scalar(plot_name, curve_name, val, iteration=iteration_num)
+
+    def report_matplotlib_figure(self, figure, title, iteration):
+        if self.task:
+            mlops_logger = self.task.get_logger()
+            mlops_logger.report_matplotlib_figure(
+                title=title,
+                series=title,
+                iteration=iteration,
+                figure=figure,
+                report_image=True)
