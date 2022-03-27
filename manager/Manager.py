@@ -163,13 +163,6 @@ class Manager(object):
                     fold,
                     run_mode=RunMode.TRAINING)
 
-        if postprocessor is not None and test_data_loaders is not None:
-            postprocessor.aggregate_predictions_for_all_folds(
-                output_folder=self.settings["output_folder"],
-                task=self.mlops_task,
-                run_mode=RunMode.TRAINING
-            )
-
     def predict(
             self,
             get_app_fns,
