@@ -2,85 +2,85 @@ import os
 import glob
 import numpy as np
 import pandas as pd
-from utils.plots_matplotlib import bar_plot
+from loguru import logger
+from utils.plots_matplotlib import bar_plot, grouped_bar_plot
 
 
-def load_dataset_file(dataset_file_path):
+def load_dataset_file(
+        dataset_file_path: str) -> pd.DataFrame:
 
     """
-    This method loads dataset file.
-    Currently supported formats are .csv and .json.
+    This method loads dataset file as pandas DataFrame\n
+    Supported formats are CSV and JSON
+
     :param dataset_file_path: path of the dataset file
-    :return: pandas dataframe that contains dataset information
+    :return: pandas `DataFrame` that contains dataset information
     """
+
+    logger.info(f'Loading dataset file {dataset_file_path}')
 
     _, file_extension = os.path.splitext(dataset_file_path)
-    if file_extension == ".csv":
+    if file_extension == '.csv':
         data_info = pd.read_csv(dataset_file_path)
-    elif file_extension == ".json":
+    elif file_extension == '.json':
         data_info = pd.read_json(dataset_file_path)
     else:
-        raise ValueError("Unknown file type: {0}".format(file_extension))
+        raise ValueError(f'Unknown file type: {file_extension}')
 
     return data_info
 
 
-def create_dataset(data_template, mask_template=None, classification=False, save_dataset_file=False, output_dataset_file_path=""):
+def create_dataset(
+        data_template: str,
+        mask_template: str = '',
+        classification: bool = False):
 
     """
-    This method creates dataset file that contains columns with paths of the data files, group names and optionally paths of mask files and class names
-    under the assumption that corresponding files will have the same index after sorting.
-    Data paths column will have name: "image".
-    Mask paths column will have name: "mask".
-    Basename column ("image_basename") will be created.
-    Group column with name "group" will be created to distinguish between different groups of data and will contain name of the parent directory
-    (in classification case second degree parent directory) of the data file.
-    In classification case class column with name "class" will be created and will contain name of the parent directory of the data file
-    :param data_template: data template that are readable by glob
-    :param mask_template: mask template that are readable by glob
-    :param classification: if True classification dataset file will be created ("class" column will be added), if False segmentation dataset will be created
-    :param save_dataset_file: if True dataset file will be saved in .csv format
-    :param output_dataset_file_path: path of the output dataset file
-    :return: pandas dataframe that contains paths of the files in directories
+    This method creates pandas DataFrame from the specified files with following columns:
+     - data_name
+     - data_path
+     - mask_path (optional)
+     - data_class (optional)
+    In segmentation case this method assumes that corresponding data and mask files will have the same index after sorting\n
+    In classification case data_class column will contain name of the parent directory of the data file\n
+    :param data_template: data template readable by glob
+    :param mask_template: mask template readable by glob; if empty mask_path column won't be created
+    :param classification: if True data_class column is created
+    :return: pandas DataFrame that contains dataset information
     """
 
+    logger.info(f'Creating dataset file')
     data_info = pd.DataFrame()
 
+    # Create data_path column
     data_paths = glob.glob(data_template)
     if len(data_paths) == 0:
-        print("There is no data for data template: {0}".format(data_template))
-        return data_info
+        raise FileNotFoundError(f'No files found for data template: {data_template}')
 
+    logger.info(f'Found {len(data_paths)} data files')
     data_paths.sort()
+    data_info['data_path'] = data_paths
+
+    # Create data_name column
     data_names = [os.path.basename(path) for path in data_paths]
+    data_info["data_name"] = data_names
 
-    if classification:
-        data_groups = [os.path.basename(os.path.dirname(os.path.dirname(path))) for path in data_paths]
-        data_classes = [os.path.basename(os.path.dirname(path)) for path in data_paths]
-        data_info["class"] = data_classes
-    else:
-        data_groups = [os.path.basename(os.path.dirname(path)) for path in data_paths]
-
-    data_info["image_basename"] = data_names
-    data_info["image"] = data_paths
-    data_info["group"] = data_groups
-
+    # Create mask_path column
     if mask_template:
         mask_paths = glob.glob(mask_template)
         if len(mask_paths) == 0:
-            print("There is no data for mask template: {0}".format(mask_template))
-            return data_info
+            raise FileNotFoundError(f'No files found for data template: {mask_template}')
+
+        logger.info(f'Found {len(mask_paths)} mask files')
+        assert len(mask_paths) == len(data_paths), f'Number of data files {len(data_paths)} is NOT equal to number of mask files {len(mask_paths)}'
 
         mask_paths.sort()
-        data_info["mask"] = mask_paths
+        data_info['mask_path'] = mask_paths
 
-    if save_dataset_file:
-
-        if not output_dataset_file_path:
-            print("Output path is empty")
-            return data_info
-
-        data_info.to_csv(output_dataset_file_path, index=False)
+    # Create data_class column
+    if classification:
+        data_classes = [os.path.basename(os.path.dirname(path)) for path in data_paths]
+        data_info['data_class'] = data_classes
 
     return data_info
 
@@ -161,6 +161,52 @@ def calculate_folds_statistic(metrics_dfs):
     df_statistic = pd.concat((df_mean, df_std), axis=1)
 
     return df_statistic
+
+
+def plot_folds_metrics(metrics_dfs, groups_names=None, save_plot=False, output_dir=""):
+
+    if groups_names is None:
+        groups_names = [f'{idx}' for idx in range(len(metrics_dfs))]
+
+    metrics_transposed_dfs = [metrics_df.transpose() for metrics_df in metrics_dfs]
+    metrics_names = metrics_transposed_dfs[0].columns
+    metrics_transposed_dfs = [metrics_df.reset_index() for metrics_df in metrics_transposed_dfs]
+    [metrics_df.insert(0, 'group', groups_names[fold]) for fold, metrics_df in enumerate(metrics_transposed_dfs)]
+    df_concat = pd.concat(metrics_transposed_dfs)
+
+    for metric_name in metrics_names:
+        output_path = os.path.join(output_dir, f'{metric_name}.png')
+        grouped_bar_plot(
+            data=df_concat,
+            x_column_name='index',
+            y_column_name=metric_name,
+            hue_column_name='group',
+            save_plot=save_plot,
+            output_plot_path=output_path
+        )
+
+
+def get_sample_weights(dataset, labels, label_column):
+
+    # Calculate not normalized label weights
+    total_samples_num = dataset.shape[0]
+    label_weights_list = []
+    for label in labels:
+        label_weights_list.append(total_samples_num / dataset[dataset[label_column] == label].shape[0])
+
+    # Normalize label weights
+    norm = np.linalg.norm(label_weights_list)
+    label_weights_list = label_weights_list / norm
+
+    # Assign normalized weight for each label
+    label_weights_dict = {}
+    for label_idx, label in enumerate(labels):
+        label_weights_dict[label] = label_weights_list[label_idx]
+
+    # Assign normalized weight for each data sample
+    sample_weights = [label_weights_dict[row[label_column]] for _, row in dataset.iterrows()]
+
+    return sample_weights
 
 
 def subsample(dataframe, sampling_column):

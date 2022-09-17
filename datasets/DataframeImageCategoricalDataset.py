@@ -1,5 +1,6 @@
-import cv2
 import numpy as np
+from PIL import Image
+from torch.utils.data import Dataset
 from datasets.BaseDataframeDataset import BaseDataframeDataset
 
 
@@ -10,7 +11,7 @@ default_settings = {
 }
 
 
-class DataframeImageCategoricalDataset(BaseDataframeDataset):
+class DataframeImageCategoricalDataset(BaseDataframeDataset, Dataset):
 
     def __init__(
             self,
@@ -26,11 +27,10 @@ class DataframeImageCategoricalDataset(BaseDataframeDataset):
         )
 
     def get_data(self, df_row):
-        image = cv2.imread(df_row[self.settings['image_path_column']], flags=cv2.IMREAD_COLOR)
-        return image
+        with open(df_row[self.settings['image_path_column']], "rb") as f:
+            img = Image.open(f)
+            return img.convert("RGB")
 
     def get_label(self, df_row):
-        label = np.zeros(shape=(len(self.settings['labels']),))
         idx = np.where(np.array(self.settings['labels']) == df_row[self.settings['label_name_column']])[0][0]
-        label[idx] = 1
-        return label
+        return idx

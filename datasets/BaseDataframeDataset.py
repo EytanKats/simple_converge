@@ -1,5 +1,4 @@
 import abc
-from utils.dataset_utils import subsample, oversample, balance
 
 
 default_settings = {
@@ -67,10 +66,11 @@ class BaseDataframeDataset(abc.ABC):
 
         data = self.get_data(self.dataframe.iloc[index])
         label = self.get_label(self.dataframe.iloc[index])
-        data, label = self.transform(data, label)
+        data = self.transform(data, label)
+        data = list(data)  # there is an assumption that self.transform returns tuple
+        data.append(index)
 
-        # return data, label, self.dataframe.iloc[index]
-        return data, label, index
+        return data
 
     def __len__(self):
 

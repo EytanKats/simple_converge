@@ -114,7 +114,7 @@ def confusion_matrix_plot(confusion_matrix,
                           output_path="",
                           fig_size=(10, 5.5),
                           mlops_task=None,
-                          mlops_iteration=None):
+                          mlops_iteration=0):
 
     """
     This method draws confusion matrix plot (https://en.wikipedia.org/wiki/Confusion_matrix)
@@ -150,7 +150,8 @@ def confusion_matrix_plot(confusion_matrix,
     plt.tight_layout()
 
     title = pathlib.Path(output_path).stem
-    mlops_task.report_matplotlib_figure(figure=fig, title=title, iteration=mlops_iteration)
+    if mlops_task is not None:
+        mlops_task.report_matplotlib_figure(figure=fig, title=title, iteration=mlops_iteration)
 
     if show:
         plt.show()
@@ -327,3 +328,53 @@ def bar_plot(groups, save_plot=False, output_plot_path=""):
         plt.show()
 
     plt.close()
+
+
+def grouped_bar_plot(
+        data,
+        x_column_name,
+        y_column_name,
+        hue_column_name,
+        mlops_task=None,
+        mlops_iteration=0,
+        save_plot=False,
+        output_plot_path=''):
+
+    """
+    This method build bar plot from the pandas series.
+    :param data: pandas dataframe that contains 'x_column_name', 'y_column_name' and 'hue_column_name' columns
+    :param x_column_name: column that contains x-axis values
+    :param y_column_name: column that contains y-axis values
+    :param hue_column_name: column that contains values according to which bars will be grouped
+    :param mlops_task: ClearML Task object that is used to save the plot into experiments management framework
+    :param mlops_iteration: iteration number for witch plot will be registered on MLOps server
+    :param save_plot: if True the plot will be saved if False the plot will be shown
+    :param output_plot_path: path to save plot
+    :return: None
+    """
+
+    sns.set_theme(style="whitegrid")
+    g = sns.catplot(
+        data=data,
+        kind="bar",
+        x=x_column_name,
+        y=y_column_name,
+        hue=hue_column_name,
+        palette="dark",
+        alpha=.6,
+        height=6
+    )
+
+    g.set_axis_labels("", y_column_name)
+    g.legend.set_title("")
+
+    if mlops_task is not None:
+        mlops_task.report_matplotlib_figure(figure=g, title=f'{y_column_name}', iteration=mlops_iteration)
+
+    if save_plot:
+        plt.savefig(output_plot_path)
+    else:
+        plt.show()
+
+    plt.close()
+

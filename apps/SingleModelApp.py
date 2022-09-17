@@ -1,6 +1,8 @@
 import torch
 from loguru import logger
-from apps.BaseSingleModelApp import BaseSingleModelApp
+
+from utils.training import EMA
+from apps.BaseApp import BaseApp
 
 
 default_settings = {
@@ -14,14 +16,16 @@ default_settings = {
     'use_reduce_lr_on_plateau': False,
     'reduce_lr_on_plateau_patience': 3,
     'reduce_lr_on_plateau_factor': 0.8,
-    'reduce_lr_on_plateau_min': 1e-6
+    'reduce_lr_on_plateau_min': 1e-6,
+    'use_ema': False,
+    'ema_decay': 0.999
 }
 
 
-class SingleModelApp(BaseSingleModelApp):
+class SingleModelApp(BaseApp):
 
     """
-    This class defines common methods to all Tensorflow models
+    This class defines single model application.
     """
 
     def __init__(
@@ -30,12 +34,10 @@ class SingleModelApp(BaseSingleModelApp):
             model,
             optimizer,
             scheduler,
-            loss_fns,
-            loss_weights,
-            loss_names,
-            metric_fns,
-            metric_names,
-            metric_num
+            losses_fns,
+            losses_names,
+            metrics_fns,
+            metrics_names
             ):
         
         """
@@ -45,12 +47,10 @@ class SingleModelApp(BaseSingleModelApp):
         
         super(SingleModelApp, self).__init__(
             settings,
-            loss_fns,
-            loss_weights,
-            loss_names,
-            metric_fns,
-            metric_names,
-            metric_num
+            losses_fns,
+            losses_names,
+            metrics_fns,
+            metrics_names
         )
 
         self.model = model
@@ -59,6 +59,8 @@ class SingleModelApp(BaseSingleModelApp):
 
         self.ckpt_cnt = 0
         self.latest_ckpt_path = None
+
+        self.ema = EMA(self.model, self.settings['ema_decay'])
 
     def restore_ckpt(self, ckpt_path=''):
         if ckpt_path:
@@ -70,70 +72,95 @@ class SingleModelApp(BaseSingleModelApp):
         self.model.load_state_dict(torch.load(ckpt_path))
 
     def save_ckpt(self, ckpt_path):
+
+        if self.settings['use_ema']:
+            self.ema.apply_shadow()
+
         self.latest_ckpt_path = ckpt_path + '-' + str(self.ckpt_cnt) + '.pth'
         self.ckpt_cnt += 1
         torch.save(self.model.state_dict(), self.latest_ckpt_path)
+
+        if self.settings['use_ema']:
+            self.ema.restore()
 
     def get_lr(self):
         for param_group in self.optimizer.param_groups:
             return param_group['lr']
 
     def set_lr(self, lr):
-        self.optimizer.learning_rate = lr
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] = lr
 
     def apply_scheduler(self):
         if self.scheduler is not None:
             self.scheduler.step()
 
-    def step(self, data, labels, training):
+    def training_step(self, data, epoch):
 
-        if training:
-            self.model.train()
-        else:
-            self.model.eval()
+        self.model.train()
 
-        data = data.cuda()
-        labels = labels.cuda()
+        input_data = data[0].cuda()
+        labels = data[1].cuda()
 
         self.optimizer.zero_grad()
 
-        with torch.set_grad_enabled(training):
+        with torch.set_grad_enabled(True):
 
-            # Forward pass
-            model_output = self.model(data)
+            # Apply model
+            model_output = self.model(input_data)
 
             # Calculate loss
-            batch_loss = 0
             batch_loss_list = list()
 
-            if len(self.loss_fns) == 1:
-                loss = self.loss_fns[0](model_output, labels)
-                batch_loss_list.append(loss.detach().cpu().numpy())
-                batch_loss += loss * self.loss_weights[0]
-            else:
-                for int_loss_idx in range(len(self.loss_fns)):
-                    loss = self.loss_fns[int_loss_idx](model_output[int_loss_idx], labels[int_loss_idx])
-                    batch_loss_list.append(loss.detach().cpu().numpy())
-                    batch_loss += loss * self.loss_weights[int_loss_idx]
+            loss = self.losses_fns[0](model_output, labels)
+            batch_loss_list.append(loss.detach().cpu().numpy())
 
             # Calculate metrics
             batch_metric_list = list()
 
-            if len(self.metric_fns) == 1:
-                for metric_fn in self.metric_fns[0]:
-                    metric = metric_fn(model_output, labels)
-                    batch_metric_list.append(metric.detach().cpu().numpy())
-
-            else:
-                for int_output_idx, metric_fns_for_output in enumerate(self.metric_fns):
-                    for metric_fn in metric_fns_for_output:
-                        metric = metric_fn(model_output[int_output_idx], labels[int_output_idx])
-                        batch_metric_list.append(metric.detach().cpu().numpy())
+            for metric_fn in self.metrics_fns:
+                metric = metric_fn(model_output, labels)
+                batch_metric_list.append(metric.detach().cpu().numpy())
 
         # Backward pass
-        if training:
-            loss.backward()
-            self.optimizer.step()
+        loss.backward()
+        self.optimizer.step()
+
+        if self.settings['use_ema']:
+            self.ema.update()
+
+        return batch_loss_list, batch_metric_list
+
+    def validation_step(self, data, epoch):
+
+        self.model.eval()
+
+        if self.settings['use_ema']:
+            self.ema.apply_shadow()
+
+        input_data = data[0].cuda()
+        labels = data[1].cuda()
+
+        with torch.set_grad_enabled(False):
+
+            # Apply model
+            model_output = self.model(input_data)
+
+            # Calculate loss
+            batch_loss_list = list()
+
+            loss = self.losses_fns[0](model_output, labels)
+            batch_loss_list.append(loss.detach().cpu().numpy())
+
+            # Calculate metrics
+            batch_metric_list = list()
+
+            for metric_fn in self.metrics_fns:
+                metric = metric_fn(model_output, labels)
+                batch_metric_list.append(metric.detach().cpu().numpy())
+
+        if self.settings['use_ema']:
+            self.ema.restore()
 
         return batch_loss_list, batch_metric_list
 

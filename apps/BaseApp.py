@@ -19,7 +19,7 @@ default_settings = {
 }
 
 
-class BaseSingleModelApp(abc.ABC):
+class BaseApp(abc.ABC):
 
     """
     This class defines common methods to all Tensorflow models
@@ -28,27 +28,30 @@ class BaseSingleModelApp(abc.ABC):
     def __init__(
             self,
             settings,
-            loss_fns,
-            loss_weights,
-            loss_names,
-            metric_fns,
-            metric_names,
-            metric_num
+            losses_fns,
+            losses_names,
+            metrics_fns,
+            metrics_names
             ):
         
         """
-        This method initializes parameters
+        This method initializes parameters.
+        :param settings: Dictionary that contains configuration parameters.
+        :param losses_names: List that contains names of loss functions names in the same order as returned by step method.
+        These names will be used for logging.
+        :param metrics_names: List that contains names of metrics names in the same order as returned by step method.
+        These names will be used for logging.
         :return: None 
         """
         
         self.settings = settings
 
-        self.loss_fns = loss_fns
-        self.loss_names = loss_names
-        self.loss_weights = loss_weights
-        self.metric_fns = metric_fns
-        self.metric_names = metric_names
-        self.metric_num = metric_num
+        self.losses_fns = losses_fns
+        self.losses_names = losses_names
+        self.losses_num = len(losses_names)
+        self.metrics_fns = metrics_fns
+        self.metrics_names = metrics_names
+        self.metrics_num = len(metrics_names)
 
         self.monitor_cur_val = 0
         self.monitor_best_val = 0
@@ -133,17 +136,21 @@ class BaseSingleModelApp(abc.ABC):
             self.monitor_best_val = self.monitor_cur_val
 
     @abc.abstractmethod
-    def step(self, data, labels, training):
+    def training_step(self, data, epoch):
+        pass
+
+    @abc.abstractmethod
+    def validation_step(self, data, epoch):
         pass
 
     def fit(self, train_data_loader, val_data_loader, ckpt_path, fold=0, mlops_task=None):
 
         # Instantiate epoch history lists
         lr_epoch_history = list()
-        training_epoch_loss_history = np.zeros([0, len(self.loss_fns)])
-        val_epoch_loss_history = np.zeros([0, len(self.loss_fns)])
-        training_epoch_metrics_history = np.zeros([0, self.metric_num])
-        val_epoch_metrics_history = np.zeros([0, self.metric_num])
+        training_epoch_loss_history = np.zeros([0, self.losses_num])
+        val_epoch_loss_history = np.zeros([0, self.losses_num])
+        training_epoch_metrics_history = np.zeros([0, self.metrics_num])
+        val_epoch_metrics_history = np.zeros([0, self.metrics_num])
 
         # Initialize monitor value
         if self.settings['monitor_regime'] == 'min':
@@ -177,84 +184,82 @@ class BaseSingleModelApp(abc.ABC):
             mlops_task.log_scalar_to_mlops_server(f'learning_rate', f'lr_f{fold}', current_lr, epoch)
 
             # Instantiate batch history lists
-            batch_loss_history = np.zeros([0, len(self.loss_fns)])
-            batch_metrics_history = np.zeros([0, self.metric_num])
+            batch_loss_history = np.zeros([0, self.losses_num])
+            batch_metrics_history = np.zeros([0, self.metrics_num])
 
             # Training mini-batches loop
-            for batch_data, batch_labels, _ in tqdm(train_data_loader, desc='Training'):
-                loss_list, metric_list = self.step(batch_data, batch_labels, training=True)
-                batch_loss_history = np.concatenate([batch_loss_history, np.reshape(loss_list, newshape=(1, len(self.loss_fns)))], axis=0)
-                batch_metrics_history = np.concatenate([batch_metrics_history, np.reshape(metric_list, newshape=(1, self.metric_num))], axis=0)
+            for batch_data in tqdm(train_data_loader, desc='Training'):
+                loss_list, metric_list = self.training_step(batch_data, epoch)
+                batch_loss_history = np.concatenate([batch_loss_history, np.reshape(loss_list, newshape=(1, self.losses_num))], axis=0)
+                batch_metrics_history = np.concatenate([batch_metrics_history, np.reshape(metric_list, newshape=(1, self.metrics_num))], axis=0)
 
             # Calculate and log mean training loss for epoch
             epoch_loss_list = list()
-            for loss_idx, loss_name in enumerate(self.loss_names):
+            for loss_idx, loss_name in enumerate(self.losses_names):
                 batch_mean_single_loss = np.nanmean(batch_loss_history[:, loss_idx])
                 epoch_loss_list.append(batch_mean_single_loss)
 
-                logger.info(f'Training loss for output {loss_idx} - {loss_name}: {batch_mean_single_loss:.4f}')
+                logger.info(f'Training loss {loss_name}: {batch_mean_single_loss:.4f}')
 
                 # Log to MLOps server
-                mlops_task.log_scalar_to_mlops_server(f'loss_for_output_{loss_idx}', f'train_{loss_name}_f{fold}', batch_mean_single_loss, epoch)
+                mlops_task.log_scalar_to_mlops_server(f'loss_{loss_name}', f'train_{loss_name}_f{fold}', batch_mean_single_loss, epoch)
 
-            training_epoch_loss_history = np.concatenate([training_epoch_loss_history, np.reshape(epoch_loss_list, newshape=(1, len(self.loss_fns)))], axis=0)
+            training_epoch_loss_history = np.concatenate([training_epoch_loss_history, np.reshape(epoch_loss_list, newshape=(1, self.losses_num))], axis=0)
 
             # Calculate and log mean training metrics for epoch
             epoch_metric_list = list()
-            for output_idx, metric_names_for_output in enumerate(self.metric_names):
-                for metric_idx, metric_name in enumerate(metric_names_for_output):
-                    batch_mean_single_metric = np.nanmean(batch_metrics_history[:, output_idx + metric_idx])
-                    epoch_metric_list.append(batch_mean_single_metric)
+            for metric_idx, metric_name in enumerate(self.metrics_names):
+                batch_mean_single_metric = np.nanmean(batch_metrics_history[:, metric_idx])
+                epoch_metric_list.append(batch_mean_single_metric)
 
-                    logger.info(f'Training metric {metric_idx} for output {output_idx} - {metric_name}: {batch_mean_single_metric:.4f}')
+                logger.info(f'Training metric {metric_name}: {batch_mean_single_metric:.4f}')
 
-                    # Log to MLOps server
-                    mlops_task.log_scalar_to_mlops_server(f'metric_{metric_idx}_for_output_{output_idx}', f'train_{metric_name}_f{fold}', batch_mean_single_metric, epoch)
+                # Log to MLOps server
+                mlops_task.log_scalar_to_mlops_server(f'metric_{metric_name}', f'train_{metric_name}_f{fold}', batch_mean_single_metric, epoch)
 
-            training_epoch_metrics_history = np.concatenate([training_epoch_metrics_history, np.reshape(epoch_metric_list, newshape=(1, self.metric_num))], axis=0)
+            training_epoch_metrics_history = np.concatenate([training_epoch_metrics_history, np.reshape(epoch_metric_list, newshape=(1, self.metrics_num))], axis=0)
 
             # Zero batch loss and metric history after training mini-batches loop
-            batch_loss_history = np.zeros([0, len(self.loss_fns)])
-            batch_metrics_history = np.zeros([0, self.metric_num])
+            batch_loss_history = np.zeros([0, self.losses_num])
+            batch_metrics_history = np.zeros([0, self.metrics_num])
 
             # Validation mini-batches loop
-            for batch_data, batch_labels, _ in tqdm(val_data_loader, desc="Validation"):
-                loss_list, metric_list = self.step(batch_data, batch_labels, training=False)
-                batch_loss_history = np.concatenate([batch_loss_history, np.reshape(loss_list, newshape=(1, len(self.loss_fns)))], axis=0)
-                batch_metrics_history = np.concatenate([batch_metrics_history, np.reshape(metric_list, newshape=(1, self.metric_num))], axis=0)
+            for batch_data in tqdm(val_data_loader, desc="Validation"):
+                loss_list, metric_list = self.validation_step(batch_data, epoch)
+                batch_loss_history = np.concatenate([batch_loss_history, np.reshape(loss_list, newshape=(1, self.losses_num))], axis=0)
+                batch_metrics_history = np.concatenate([batch_metrics_history, np.reshape(metric_list, newshape=(1, self.metrics_num))], axis=0)
 
             # Calculate and log mean validation loss for epoch
             epoch_loss_list = list()
-            for loss_idx, loss_name in enumerate(self.loss_names):
+            for loss_idx, loss_name in enumerate(self.losses_names):
                 batch_mean_single_loss = np.nanmean(batch_loss_history[:, loss_idx])
                 epoch_loss_list.append(batch_mean_single_loss)
 
-                if f'{loss_name}_loss_{loss_idx}' == self.settings['monitor']:
+                if f'{loss_name}' == self.settings['monitor']:
                     self.monitor_cur_val = batch_mean_single_loss
 
-                logger.info(f'Validation loss for output {loss_idx} - {loss_name}: {batch_mean_single_loss:.4f}')
+                logger.info(f'Validation loss {loss_name}: {batch_mean_single_loss:.4f}')
 
                 # Log to MLOps server
-                mlops_task.log_scalar_to_mlops_server(f'loss_for_output_{loss_idx}', f'val_{loss_name}_f{fold}', batch_mean_single_loss, epoch)
+                mlops_task.log_scalar_to_mlops_server(f'loss_{loss_name}', f'val_{loss_name}_f{fold}', batch_mean_single_loss, epoch)
 
-            val_epoch_loss_history = np.concatenate([val_epoch_loss_history, np.reshape(epoch_loss_list, newshape=(1, len(self.loss_fns)))], axis=0)
+            val_epoch_loss_history = np.concatenate([val_epoch_loss_history, np.reshape(epoch_loss_list, newshape=(1, self.losses_num))], axis=0)
 
             # Calculate and log mean validation metrics for epoch
             epoch_metric_list = list()
-            for output_idx, metric_names_for_output in enumerate(self.metric_names):
-                for metric_idx, metric_name in enumerate(metric_names_for_output):
-                    batch_mean_single_metric = np.nanmean(batch_metrics_history[:, output_idx + metric_idx])
-                    epoch_metric_list.append(batch_mean_single_metric)
+            for metric_idx, metric_name in enumerate(self.metrics_names):
+                batch_mean_single_metric = np.nanmean(batch_metrics_history[:, metric_idx])
+                epoch_metric_list.append(batch_mean_single_metric)
 
-                    if f'{metric_name}_metric_{output_idx}_{metric_idx}' == self.settings['monitor']:
-                        self.monitor_cur_val = batch_mean_single_metric
+                if f'{metric_name}' == self.settings['monitor']:
+                    self.monitor_cur_val = batch_mean_single_metric
 
-                    logger.info(f'Validation metric {metric_idx} for output {output_idx} - {metric_name}: {batch_mean_single_metric:.4f}')
+                logger.info(f'Validation metric {metric_name}: {batch_mean_single_metric:.4f}')
 
-                    # Log to MLOps server
-                    mlops_task.log_scalar_to_mlops_server(f'metric_{metric_idx}_for_output_{output_idx}', f'val_{metric_name}_f{fold}', batch_mean_single_metric, epoch)
+                # Log to MLOps server
+                mlops_task.log_scalar_to_mlops_server(f'metric_{metric_name}', f'val_{metric_name}_f{fold}', batch_mean_single_metric, epoch)
 
-            val_epoch_metrics_history = np.concatenate([val_epoch_metrics_history, np.reshape(epoch_metric_list, newshape=(1, self.metric_num))], axis=0)
+            val_epoch_metrics_history = np.concatenate([val_epoch_metrics_history, np.reshape(epoch_metric_list, newshape=(1, self.metrics_num))], axis=0)
 
             # Save checkpoint
             self.create_checkpoint(epoch, ckpt_path)

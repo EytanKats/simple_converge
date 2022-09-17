@@ -1,9 +1,9 @@
-from clearml import Task
-
+from clearml import Task, TaskTypes
 
 default_mlops_settings = {
     'project_name': 'Default Project',
     'task_name': 'default_task',
+    'task_type': TaskTypes.training,
     'connect_frameworks': {
         'matplotlib': False,
         'tensorflow': False,
@@ -51,16 +51,18 @@ class MLOpsTask(object):
                                task_name=self.settings["task_name"],
                                auto_connect_frameworks=self.settings["connect_frameworks"])
 
+        self._task.set_task_type(self.settings['task_type'])
+
         return self._task
 
     def log_configuration(self, config_dict, name):
         if self.task:
             self.task.connect(config_dict, name)
 
-    def log_scalar_to_mlops_server(self, plot_name, curve_name, val, iteration_num):
+    def log_scalar_to_mlops_server(self, plot_name, curve_name, val, iteration):
         if self.task:
             logger = self.task.get_logger()
-            logger.report_scalar(plot_name, curve_name, val, iteration=iteration_num)
+            logger.report_scalar(plot_name, curve_name, val, iteration=iteration)
 
     def report_matplotlib_figure(self, figure, title, iteration):
         if self.task:

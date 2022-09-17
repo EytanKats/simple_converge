@@ -134,7 +134,7 @@ class Manager(object):
             # Load start point checkpoint
             if self.settings['restore_checkpoint']:
                 logger.info(f'Restore checkpoint: {self.settings["restore_checkpoint_path"]}.')
-                app.restore(self.settings["restore_checkpoint_path"])
+                app.restore_ckpt(self.settings["restore_checkpoint_path"])
 
             # Create checkpoint directory
             fold_ckpt_folder = os.path.join(self.settings["output_folder"], str(fold), 'checkpoint')
@@ -145,7 +145,7 @@ class Manager(object):
             app.fit(
                 train_data_loader=train_data_loaders[fold],
                 val_data_loader=val_data_loaders[fold],
-                ckpt_path=fold_ckpt_folder + 'ckpt',
+                ckpt_path=os.path.join(fold_ckpt_folder, 'ckpt'),
                 fold=fold,
                 mlops_task=self.mlops_task
             )
@@ -154,7 +154,7 @@ class Manager(object):
             if postprocessor is not None and test_data_loaders is not None:
 
                 logger.info(f'Evaluate model.')
-                app.restore()
+                app.restore_ckpt()
                 self.predict_fold(
                     app,
                     postprocessor,
@@ -185,7 +185,7 @@ class Manager(object):
 
             # Restore checkpoint
             logger.info(f'Restore checkpoint {checkpoint_paths[idx]}.')
-            app.restore(checkpoint_paths[idx])
+            app.restore_ckpt(checkpoint_paths[idx])
 
             # Predict
             logger.info(f'Predict.')
