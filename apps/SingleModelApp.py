@@ -99,8 +99,8 @@ class SingleModelApp(BaseApp):
 
         self.model.train()
 
-        input_data = data[0].cuda()
-        labels = data[1].cuda()
+        input_data = data[0].to(self.device)
+        labels = data[1].to(self.device)
 
         self.optimizer.zero_grad()
 
@@ -138,8 +138,8 @@ class SingleModelApp(BaseApp):
         if self.settings['use_ema']:
             self.ema.apply_shadow()
 
-        input_data = data[0].cuda()
-        labels = data[1].cuda()
+        input_data = data[0].to(self.device)
+        labels = data[1].to(self.device)
 
         with torch.set_grad_enabled(False):
 
@@ -167,7 +167,7 @@ class SingleModelApp(BaseApp):
     def predict(self, data):
 
         self.model.eval()
-        data = data.cuda()
+        data = data.to(self.device)
         with torch.no_grad():
             predictions = self.model(data)
         predictions = predictions.detach().cpu().numpy()

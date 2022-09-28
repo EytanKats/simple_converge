@@ -79,10 +79,10 @@ class PiModelApp(SingleModelApp):
         self.model.train()
 
         # Send data and labels to GPU
-        sup_input_data = data[0].cuda()
-        sup_labels = data[1].cuda()
-        unsup_data_view_1 = data[3].cuda()
-        unsup_data_view_2 = data[4].cuda()
+        sup_input_data = data[0].to(self.device)
+        sup_labels = data[1].to(self.device)
+        unsup_data_view_1 = data[3].to(self.device)
+        unsup_data_view_2 = data[4].to(self.device)
 
         # Reset optimizer
         self.optimizer.zero_grad()
@@ -152,8 +152,8 @@ class PiModelApp(SingleModelApp):
             self.ema.apply_shadow()
 
         # Send data and labels to GPU
-        input_data = data[0].cuda()
-        labels = data[1].cuda()
+        input_data = data[0].to(self.device)
+        labels = data[1].to(self.device)
 
         with torch.set_grad_enabled(False):
 

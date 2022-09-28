@@ -1,4 +1,5 @@
 import abc
+import torch
 import numpy as np
 from tqdm import tqdm
 from loguru import logger
@@ -58,6 +59,8 @@ class BaseApp(abc.ABC):
         self.ckpt_best_epoch = 0
         self.early_stopping_cnt = 0
         self.reduce_lr_on_plateau_cnt = 0
+
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     @abc.abstractmethod
     def save_ckpt(self, ckpt_path):
