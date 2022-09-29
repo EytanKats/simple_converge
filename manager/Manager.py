@@ -103,6 +103,7 @@ class Manager(object):
 
     def fit(
             self,
+            trainer,
             get_app_fns,
             train_data_loaders,
             val_data_loaders,
@@ -142,7 +143,8 @@ class Manager(object):
 
             # Train model
             logger.info(f'Train model.')
-            app.fit(
+            trainer.fit(
+                app=app,
                 train_data_loader=train_data_loaders[fold],
                 val_data_loader=val_data_loaders[fold],
                 ckpt_path=os.path.join(fold_ckpt_folder, 'ckpt'),

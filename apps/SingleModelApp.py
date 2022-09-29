@@ -6,17 +6,6 @@ from apps.BaseApp import BaseApp
 
 
 default_settings = {
-    'epochs': None,
-    'monitor': 'not_defined',
-    'monitor_regime': 'not_defined',
-    'ckpt_freq': 1,
-    'ckpt_save_best_only': True,
-    'use_early_stopping': False,
-    'early_stopping_patience': 10,
-    'use_reduce_lr_on_plateau': False,
-    'reduce_lr_on_plateau_patience': 3,
-    'reduce_lr_on_plateau_factor': 0.8,
-    'reduce_lr_on_plateau_min': 1e-6,
     'use_ema': False,
     'ema_decay': 0.999
 }
