@@ -8,7 +8,7 @@ with open('HISTORY.md') as history_file:
 
 setup_args = dict(
     name='simple_converge',
-    version='0.9.1',
+    version='0.10.0',
     description='utilities for faster and easier prototyping of DL models',
     long_description_content_type="text/markdown",
     long_description=README + '\n\n' + HISTORY,
