@@ -44,12 +44,6 @@ class BaseApp(abc.ABC):
         self.metrics_names = metrics_names
         self.metrics_num = len(metrics_names)
 
-        self.monitor_cur_val = 0
-        self.monitor_best_val = 0
-        self.ckpt_best_epoch = 0
-        self.early_stopping_cnt = 0
-        self.reduce_lr_on_plateau_cnt = 0
-
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     @abc.abstractmethod
