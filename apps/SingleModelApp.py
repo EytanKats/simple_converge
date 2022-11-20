@@ -1,8 +1,8 @@
 import torch
 from loguru import logger
 
-from utils.training import EMA
-from apps.BaseApp import BaseApp
+from simple_converge.utils.training import EMA
+from simple_converge.apps.BaseApp import BaseApp
 
 
 default_settings = {

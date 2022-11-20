@@ -1,8 +1,8 @@
 import torch
 import numpy as np
 
-from utils.training import EMA, BnController
-from apps.SingleModelApp import SingleModelApp
+from simple_converge.utils.training import EMA, BnController
+from simple_converge.apps.SingleModelApp import SingleModelApp
 
 
 default_settings = {

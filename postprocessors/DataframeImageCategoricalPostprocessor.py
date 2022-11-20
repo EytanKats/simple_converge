@@ -6,10 +6,10 @@ from loguru import logger
 from scipy import special
 from sklearn import metrics as skl_metrics
 
-from postprocessors.BasePostProcessor import BasePostProcessor
-from utils.plots_matplotlib import confusion_matrix_plot
-from utils.plots_mlops import metric_vs_discarded_samples_plot
-from utils.metrics import categorical_classification_metrics, metric_vs_discarded_samples
+from simple_converge.postprocessors.BasePostProcessor import BasePostProcessor
+from simple_converge.utils.plots_matplotlib import confusion_matrix_plot
+from simple_converge.utils.plots_mlops import metric_vs_discarded_samples_plot
+from simple_converge.utils.metrics import categorical_classification_metrics, metric_vs_discarded_samples
 
 
 default_postprocessor_settings = {

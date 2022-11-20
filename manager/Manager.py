@@ -4,7 +4,7 @@ This file contains methods to train, evaluate and inference models
 
 import os
 from loguru import logger
-from utils.RunMode import RunMode
+from simple_converge.utils.RunMode import RunMode
 
 
 default_manager_settings = {
