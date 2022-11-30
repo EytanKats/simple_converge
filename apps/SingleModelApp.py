@@ -18,16 +18,15 @@ class SingleModelApp(BaseApp):
     """
 
     def __init__(
-            self,
-            settings,
-            model,
-            optimizer,
-            scheduler,
-            losses_fns,
-            losses_names,
-            metrics_fns,
-            metrics_names
-            ):
+        self,
+        settings,
+        mlops_task,
+        architecture,
+        loss_function,
+        metric,
+        scheduler,
+        optimizer,
+    ):
         
         """
         This method initializes parameters
@@ -36,20 +35,27 @@ class SingleModelApp(BaseApp):
         
         super(SingleModelApp, self).__init__(
             settings,
-            losses_fns,
-            losses_names,
-            metrics_fns,
-            metrics_names
+            mlops_task,
+            loss_function,
+            metric,
         )
 
-        self.model = model
-        self.optimizer = optimizer
-        self.scheduler = scheduler
+        self.model = architecture(settings)
+
+        if optimizer is not None:
+            self.optimizer = optimizer(settings, self.model)
+        else:
+            self.optimizer = None
+
+        if scheduler is not None:
+            self.scheduler = scheduler(settings, self.optimizer)
+        else:
+            self.scheduler = None
 
         self.ckpt_cnt = 0
         self.latest_ckpt_path = None
 
-        self.ema = EMA(self.model, self.settings['ema_decay'])
+        self.ema = EMA(self.model, self.settings['app']['ema_decay'])
 
     def restore_ckpt(self, ckpt_path=''):
         if ckpt_path:
@@ -62,14 +68,14 @@ class SingleModelApp(BaseApp):
 
     def save_ckpt(self, ckpt_path):
 
-        if self.settings['use_ema']:
+        if self.settings['app']['use_ema']:
             self.ema.apply_shadow()
 
         self.latest_ckpt_path = ckpt_path + '-' + str(self.ckpt_cnt) + '.pth'
         self.ckpt_cnt += 1
         torch.save(self.model.state_dict(), self.latest_ckpt_path)
 
-        if self.settings['use_ema']:
+        if self.settings['app']['use_ema']:
             self.ema.restore()
 
     def get_lr(self):
@@ -115,7 +121,7 @@ class SingleModelApp(BaseApp):
         loss.backward()
         self.optimizer.step()
 
-        if self.settings['use_ema']:
+        if self.settings['app']['use_ema']:
             self.ema.update()
 
         return batch_loss_list, batch_metric_list
@@ -124,7 +130,7 @@ class SingleModelApp(BaseApp):
 
         self.model.eval()
 
-        if self.settings['use_ema']:
+        if self.settings['app']['use_ema']:
             self.ema.apply_shadow()
 
         input_data = data[0].to(self.device)
@@ -148,7 +154,7 @@ class SingleModelApp(BaseApp):
                 metric = metric_fn(model_output, labels)
                 batch_metric_list.append(metric.detach().cpu().numpy())
 
-        if self.settings['use_ema']:
+        if self.settings['app']['use_ema']:
             self.ema.restore()
 
         return batch_loss_list, batch_metric_list

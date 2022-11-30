@@ -16,30 +16,37 @@ class BaseApp(abc.ABC):
     def __init__(
             self,
             settings,
-            losses_fns,
-            losses_names,
-            metrics_fns,
-            metrics_names
-            ):
+            mlops_task,
+            loss_function,
+            metric,
+        ):
         
         """
         This method initializes parameters.
         :param settings: Dictionary that contains configuration parameters.
-        :param losses_names: List that contains names of loss functions names in the same order as returned by step method.
-        These names will be used for logging.
-        :param metrics_names: List that contains names of metrics names in the same order as returned by step method.
-        These names will be used for logging.
         :return: None 
         """
         
         self.settings = settings
+        self.mlops_task = mlops_task
 
-        self.losses_fns = losses_fns
-        self.losses_names = losses_names
-        self.losses_num = len(losses_names)
-        self.metrics_fns = metrics_fns
-        self.metrics_names = metrics_names
-        self.metrics_num = len(metrics_names)
+        if loss_function is not None:
+            self.losses_fns = loss_function(settings)
+            self.losses_names = [_loss.__name__ for _loss in self.losses_fns]
+            self.losses_num = len(self.losses_names)
+        else:
+            self.losses_fns = []
+            self.losses_names = []
+            self.losses_num = 0
+
+        if metric is not None:
+            self.metrics_fns = metric(settings)
+            self.metrics_names = [_metric.__name__ for _metric in self.metrics_fns]
+            self.metrics_num = len(self.metrics_names)
+        else:
+            self.metrics_fns = []
+            self.metrics_names = []
+            self.metrics_num = 0
 
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 

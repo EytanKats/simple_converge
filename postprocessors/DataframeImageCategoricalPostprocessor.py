@@ -27,11 +27,12 @@ class DataframeImageCategoricalPostprocessor(BasePostProcessor):
     def __init__(
             self,
             settings,
-            dataset_df):
+            mlops_task,
+            dataframe):
 
-        super(DataframeImageCategoricalPostprocessor, self).__init__(settings)
+        super(DataframeImageCategoricalPostprocessor, self).__init__(settings, mlops_task)
 
-        self.dataset_df = dataset_df
+        self.dataset_df = dataframe
 
         self.predicted_labels_list = list()
         self.gt_labels_list = list()
