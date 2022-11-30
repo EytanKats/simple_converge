@@ -1,1 +1,2 @@
-from .Manager import Manager
+from .Manager import fit
+from .Manager import predict
