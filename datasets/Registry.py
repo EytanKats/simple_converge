@@ -1,4 +1,4 @@
-from . import DataframeImageCategoricalDataset
+from .DataframeImageCategoricalDataset import DataframeImageCategoricalDataset
 
 Registry = {
     'DataframeImageCategoricalDataset': DataframeImageCategoricalDataset
