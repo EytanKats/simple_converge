@@ -60,12 +60,12 @@ class DataframeImageCategoricalPostprocessor(BasePostProcessor):
         gt_labels = data[1]  # There is an assumption that data[1] contains ground truth labels
 
         self.predicted_labels = predicted_labels
-        self.gt_labels = gt_labels
-        self.gt_labels_one_hot = np.eye(len(self.settings['labels']))[gt_labels]
+        self.gt_labels = gt_labels.numpy()
+        self.gt_labels_one_hot = np.eye(len(self.settings['labels']))[gt_labels.numpy()]
         self.predicted_probs = predictions
 
         self.predicted_labels_list.append(predicted_labels)
-        self.gt_labels_list.append(gt_labels)
+        self.gt_labels_list.append(gt_labels.numpy())
         self.gt_labels_one_hot_list.append(self.gt_labels_one_hot)
         self.predicted_probs_list.append(predictions)
 
