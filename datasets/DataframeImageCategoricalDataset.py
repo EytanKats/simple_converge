@@ -1,7 +1,7 @@
 import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
-from datasets.BaseDataframeDataset import BaseDataframeDataset
+from simple_converge.datasets.BaseDataframeDataset import BaseDataframeDataset
 
 
 default_settings = {

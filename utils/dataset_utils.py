@@ -3,7 +3,7 @@ import glob
 import numpy as np
 import pandas as pd
 from loguru import logger
-from utils.plots_matplotlib import bar_plot, grouped_bar_plot
+from simple_converge.utils.plots_matplotlib import bar_plot, grouped_bar_plot
 
 
 def load_dataset_file(

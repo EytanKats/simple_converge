@@ -4,7 +4,7 @@ import pandas as pd
 from loguru import logger
 from sklearn import model_selection
 
-from utils import dataset_utils
+from simple_converge.utils import dataset_utils
 
 
 default_settings = {

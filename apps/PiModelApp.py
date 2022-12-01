@@ -1,8 +1,8 @@
 import torch
 import numpy as np
 
-from utils.training import EMA, BnController
-from apps.SingleModelApp import SingleModelApp
+from simple_converge.utils.training import EMA, BnController
+from simple_converge.apps.SingleModelApp import SingleModelApp
 
 
 default_settings = {
@@ -24,13 +24,12 @@ class PiModelApp(SingleModelApp):
     def __init__(
             self,
             settings,
-            model,
-            optimizer,
+            mlops_task,
+            architecture,
+            loss_function,
+            metric,
             scheduler,
-            losses_fns,
-            losses_names,
-            metrics_fns,
-            metrics_names
+            optimizer
             ):
         
         """
@@ -40,16 +39,14 @@ class PiModelApp(SingleModelApp):
         
         super(PiModelApp, self).__init__(
             settings,
-            model,
-            optimizer,
+            mlops_task,
+            architecture,
+            loss_function,
+            metric,
             scheduler,
-            losses_fns,
-            losses_names,
-            metrics_fns,
-            metrics_names
+            optimizer
         )
 
-        self.ema = EMA(self.model, self.settings['ema_decay'])
         self.bn_controller = BnController()
 
     def training_step(self, data, epoch):
@@ -73,23 +70,23 @@ class PiModelApp(SingleModelApp):
         self.optimizer.zero_grad()
 
         # Calculate consistency weight
-        if self.settings['consistency_ramp_up'] == 0:
-            consistency_loss_weight = self.settings['max_consistency_loss_weight']
+        if self.settings['app']['consistency_ramp_up'] == 0:
+            consistency_loss_weight = self.settings['app']['max_consistency_loss_weight']
         else:
-            current = np.clip(epoch, 0.0, self.settings['consistency_ramp_up'])
-            phase = 1.0 - current / self.settings['consistency_ramp_up']
-            consistency_loss_weight = self.settings['max_consistency_loss_weight'] * float(np.exp(-5.0 * phase * phase))
+            current = np.clip(epoch, 0.0, self.settings['app']['consistency_ramp_up'])
+            phase = 1.0 - current / self.settings['app']['consistency_ramp_up']
+            consistency_loss_weight = self.settings['app']['max_consistency_loss_weight'] * float(np.exp(-5.0 * phase * phase))
 
         with torch.set_grad_enabled(True):
 
             # Forward pass
             sup_output = self.model(sup_input_data)
 
-            if self.settings['use_bn_controller']:
+            if self.settings['app']['use_bn_controller']:
                 self.bn_controller.freeze_bn(self.model)
             unsup_output_1 = self.model(unsup_data_view_1)
             unsup_output_2 = self.model(unsup_data_view_2)
-            if self.settings['use_bn_controller']:
+            if self.settings['app']['use_bn_controller']:
                 self.bn_controller.unfreeze_bn(self.model)
 
             # Calculate loss
@@ -117,7 +114,7 @@ class PiModelApp(SingleModelApp):
         loss.backward()
         self.optimizer.step()
 
-        if self.settings['use_ema']:
+        if self.settings['app']['use_ema']:
             self.ema.update()
 
         return batch_loss_list, batch_metric_list
@@ -133,7 +130,7 @@ class PiModelApp(SingleModelApp):
 
         self.model.eval()
 
-        if self.settings['use_ema']:
+        if self.settings['app']['use_ema']:
             self.ema.apply_shadow()
 
         # Send data and labels to GPU
@@ -161,7 +158,7 @@ class PiModelApp(SingleModelApp):
                 metric = metric_fn(model_output, labels)
                 batch_metric_list.append(metric.detach().cpu().numpy())
 
-        if self.settings['use_ema']:
+        if self.settings['app']['use_ema']:
             self.ema.restore()
 
         return batch_loss_list, batch_metric_list

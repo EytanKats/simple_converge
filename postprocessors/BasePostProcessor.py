@@ -11,7 +11,11 @@ class BasePostProcessor(abc.ABC):
     - saving predictions
     """
 
-    def __init__(self, settings):
+    def __init__(
+            self,
+            settings,
+            mlops_task
+    ):
 
         """
         Initialize parameters.
@@ -20,6 +24,7 @@ class BasePostProcessor(abc.ABC):
         """
 
         self.settings = settings
+        self.mlops_task = mlops_task
 
     @abc.abstractmethod
     def postprocess_predictions(

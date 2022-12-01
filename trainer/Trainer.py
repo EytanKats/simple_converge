@@ -109,8 +109,8 @@ class Trainer(object):
         lr_epoch_history = list()
         training_epoch_loss_history = np.zeros([0, app.losses_num])
         val_epoch_loss_history = np.zeros([0, app.losses_num])
-        training_epoch_metrics_history = np.zeros([0, app.losses_num])
-        val_epoch_metrics_history = np.zeros([0, app.losses_num])
+        training_epoch_metrics_history = np.zeros([0, app.metrics_num])
+        val_epoch_metrics_history = np.zeros([0, app.metrics_num])
 
         # Initialize monitor value
         if self.settings['monitor_regime'] == 'min':

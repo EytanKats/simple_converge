@@ -1,201 +1,311 @@
 """
-This file contains methods to train, evaluate and inference models
+This file contains methods to fit and evaluate model and run inference
 """
 
 import os
+import glob
 from loguru import logger
-from utils.RunMode import RunMode
+from clearml import TaskTypes
+
+import simple_converge as sc
+from simple_converge.trainer import Trainer
+from simple_converge.utils.RunMode import RunMode
+from simple_converge.mlops.MLOpsTask import MLOpsTask
 
 
-default_manager_settings = {
-    'output_folder': './default_output_folder',
-    'use_mlops': False,
-    'active_folds': [0],
-    'restore_checkpoint': False,
-    'restore_checkpoint_path': ''
-}
-
-
-class Manager(object):
-
+def _create_output_folder(settings):
     """
-    This class instantiates and connects building blocks of pipeline (logger, dataset, model, etc.) and
-    manages training / testing / inference flow.
-    Main responsibilities of this class:
-    -
+    This method checks that simulation folder doesn't exist and create it
     """
 
-    def __init__(
-            self,
+    if not os.path.exists(settings["output_folder"]):
+        print(f'Create output folder {settings["output_folder"]}.')
+        os.makedirs(settings["output_folder"])
+        return True
+
+    else:
+        print(f'Output folder {settings["output_folder"]} already exists.'
+              f'\nSpecify new output folder.')
+        return False
+
+
+def _get_app(
+    settings,
+    mlops_task=None,
+    architecture=None,
+    loss_function=None,
+    metric=None,
+    scheduler=None,
+    optimizer=None,
+    app=None
+):
+
+    # If 'app' input parameter is None get application from registry
+    # else call the custom 'app' method
+    if app is None:
+        _fold_app = sc.apps.Registry[settings['app']['registry_name']](
             settings,
-            mlops_task
-    ):
+            mlops_task=mlops_task,
+            architecture=architecture,
+            loss_function=loss_function,
+            metric=metric,
+            scheduler=scheduler,
+            optimizer=optimizer,
+        )
+    else:
+        _fold_app = app(
+                settings,
+                mlops_task=mlops_task,
+                architecture=architecture,
+                loss_function=loss_function,
+                metric=metric,
+                scheduler=scheduler,
+                optimizer=optimizer,
+        )
 
-        """
-        This method initializes parameters
-        :return: None
-        """
+    return _fold_app
 
-        self.settings = settings
-        self.mlops_task = mlops_task
 
-        if not self.create_output_folder():
-            exit(0)
+def _get_postprocessor(
+    settings,
+    dataframe,
+    mlops_task=None,
+    postprocessor=None
 
-    def create_output_folder(self):
+):
 
-        # Check that simulation folder doesn't exist and create it
-        if not os.path.exists(self.settings["output_folder"]):
-            print(f'Create output folder {self.settings["output_folder"]}.')
-            os.makedirs(self.settings["output_folder"])
-            return True
+    # If 'postprocessor' input parameter is None get postprocessor from registry
+    # else call the custom 'app' method
+    if postprocessor is None:
+        _fold_postprocessor = sc.postprocessors.Registry[settings['postprocessor']['registry_name']](
+            settings['postprocessor'],
+            mlops_task=mlops_task,
+            dataframe=dataframe
+        )
+    else:
+        _fold_postprocessor = postprocessor(
+            settings['postprocessor'],
+            mlops_task=mlops_task,
+            dataframe=dataframe
+        )
 
-        else:
-            print(f'Output folder {self.settings["output_folder"]} already exists.'
-                  f'\nSpecify new output folder.')
-            return False
+    return _fold_postprocessor
 
-    def predict_fold(
-            self,
-            app,
-            postprocessor,
-            test_data_loader,
-            output_folder,
-            fold,
-            run_mode
-    ):
 
-        for test_data in test_data_loader:
+def _predict_fold(
+    mlops_task,
+    app,
+    postprocessor,
+    test_data_loader,
+    output_folder,
+    fold,
+    run_mode
+):
 
-            # Calculate predictions
-            test_predictions = app.predict(test_data[0])  # There is an assumption that test_data[0] contains model input data
+    for test_data in test_data_loader:
 
-            # Apply postprocessing
-            postprocessor.postprocess_predictions(
-                predictions=test_predictions,
-                data=test_data,
-                run_mode=run_mode,
-            )
+        # Calculate predictions
+        test_predictions = app.predict(test_data[0])  # There is an assumption that test_data[0] contains model input data
 
-            # Calculate metrics
-            if run_mode == RunMode.TEST:
-                postprocessor.calculate_metrics(
-                    output_folder=output_folder,
-                    fold=fold,
-                    task=self.mlops_task
-                )
+        # Apply postprocessing
+        postprocessor.postprocess_predictions(
+            predictions=test_predictions,
+            data=test_data,
+            run_mode=run_mode,
+        )
 
-            # Save data
-            postprocessor.save_predictions(
-                output_folder=output_folder,
-                fold=fold,
-                task=self.mlops_task,
-                run_mode=run_mode
-            )
-
-        # Calculate total metrics
+        # Calculate metrics
         if run_mode == RunMode.TEST:
-            postprocessor.calculate_total_metrics(
+            postprocessor.calculate_metrics(
                 output_folder=output_folder,
                 fold=fold,
-                task=self.mlops_task
+                task=mlops_task
             )
 
-    def fit(
-            self,
-            trainer,
-            get_app_fns,
-            train_data_loaders,
-            val_data_loaders,
-            test_data_loaders=None,
-            postprocessor=None
-    ):
+        # Save data
+        postprocessor.save_predictions(
+            output_folder=output_folder,
+            fold=fold,
+            task=mlops_task,
+            run_mode=run_mode
+        )
 
-        # Train model for each fold
-        logger.info(f'The model will be trained for {self.settings["active_folds"]} folds')
-        for fold in self.settings["active_folds"]:
+    # Calculate total metrics
+    if run_mode == RunMode.TEST:
+        postprocessor.calculate_total_metrics(
+            output_folder=output_folder,
+            fold=fold,
+            task=mlops_task
+        )
 
-            # Create app
-            app = get_app_fns[fold]()
 
-            logger.info(f'Fold: {fold}.')
+def fit(
+    settings,
+    mlops_task=None,
+    architecture=None,
+    loss_function=None,
+    metric=None,
+    scheduler=None,
+    optimizer=None,
+    app=None,
+    train_dataset=None,
+    train_loader=None,
+    val_dataset=None,
+    val_loader=None,
+    test_dataset=None,
+    test_loader=None,
+    postprocessor=None
+):
 
-            # Create simulation directory for current fold
-            logger.info(f'Create simulation folder for current fold.')
-            fold_output_folder = os.path.join(self.settings["output_folder"], str(fold))
-            os.makedirs(fold_output_folder)
+    # Create training MLOps task
+    if mlops_task is None:
+        settings['mlops']['task_type'] = TaskTypes.training
+        mlops_task = MLOpsTask(settings=settings['mlops'])
 
-            # Save data log
-            logger.info(f'Save data log for current fold.')
-            train_data_loaders[fold].dataset.save_dataframe(os.path.join(fold_output_folder, 'train_data'))
-            val_data_loaders[fold].dataset.save_dataframe(os.path.join(fold_output_folder, 'val_data'))
-            if test_data_loaders is not None:
-                test_data_loaders[fold].dataset.save_dataframe(os.path.join(fold_output_folder, 'test_data'))
+    # Log settings with MLOps task
+    if mlops_task.task is not None:
+        for key, value in settings.items():
+            mlops_task.log_configuration(value, key)
 
-            # Load start point checkpoint
-            if self.settings['restore_checkpoint']:
-                logger.info(f'Restore checkpoint: {self.settings["restore_checkpoint_path"]}.')
-                app.restore_ckpt(self.settings["restore_checkpoint_path"])
+    # Create output folder
+    if not _create_output_folder(settings['manager']):
+        exit(0)
 
-            # Create checkpoint directory
-            fold_ckpt_folder = os.path.join(self.settings["output_folder"], str(fold), 'checkpoint')
-            os.makedirs(fold_ckpt_folder)
+    # Create trainer
+    trainer = Trainer(settings['trainer'])
 
-            # Train model
-            logger.info(f'Train model.')
-            trainer.fit(
-                app=app,
-                train_data_loader=train_data_loaders[fold],
-                val_data_loader=val_data_loaders[fold],
-                ckpt_path=os.path.join(fold_ckpt_folder, 'ckpt'),
-                fold=fold,
-                mlops_task=self.mlops_task
+    # Train model for each fold
+    logger.info(f'The model will be trained for {settings["manager"]["active_folds"]} folds.')
+    for fold in settings["manager"]["active_folds"]:
+
+        logger.info(f'Fold: {fold}.')
+
+        # Create simulation directory for current fold
+        logger.info(f'Create simulation folder for current fold.')
+        fold_output_folder = os.path.join(settings['manager']['output_folder'], str(fold))
+        os.makedirs(fold_output_folder)
+
+        # Save data log
+        logger.info(f'Save data log for current fold.')
+        train_loader[fold].dataset.save_dataframe(os.path.join(fold_output_folder, 'train_data'))
+        val_loader[fold].dataset.save_dataframe(os.path.join(fold_output_folder, 'val_data'))
+        if test_loader is not None:
+            test_loader[fold].dataset.save_dataframe(os.path.join(fold_output_folder, 'test_data'))
+
+        # Get app
+        logger.info(f'Get application.')
+        fold_app = _get_app(
+            settings=settings,
+            mlops_task=mlops_task,
+            architecture=architecture,
+            loss_function=loss_function,
+            metric=metric,
+            scheduler=scheduler,
+            optimizer=optimizer,
+            app=app
+        )
+
+        # Load start point checkpoint
+        if settings['manager']['restore_checkpoint']:
+            logger.info(f'Restore checkpoint: {settings["manager"]["restore_checkpoint_path"]}.')
+            fold_app.restore_ckpt(settings['manager']['restore_checkpoint_path'])
+
+        # Create checkpoint directory
+        logger.info(f'Create checkpoints` folder.')
+        fold_ckpt_folder = os.path.join(settings['manager']['output_folder'], str(fold), 'checkpoint')
+        os.makedirs(fold_ckpt_folder)
+
+        # Train model
+        logger.info(f'Train model.')
+        trainer.fit(
+            app=fold_app,
+            train_data_loader=train_loader[fold],
+            val_data_loader=val_loader[fold],
+            ckpt_path=os.path.join(fold_ckpt_folder, 'ckpt'),
+            fold=fold,
+            mlops_task=mlops_task
+        )
+
+        # Test model
+        if postprocessor is not None and test_loader is not None:
+            logger.info(f'Evaluate model.')
+            fold_app.restore_ckpt()
+
+            # Get postprocessor
+            fold_postprocessor = _get_postprocessor(
+                settings=settings,
+                mlops_task=mlops_task,
+                postprocessor=postprocessor,
+                dataframe=test_loader[fold].dataset.dataframe
             )
 
-            # Test model
-            if postprocessor is not None and test_data_loaders is not None:
+            _predict_fold(
+                mlops_task,
+                fold_app,
+                fold_postprocessor,
+                test_loader[fold],
+                fold_output_folder,
+                fold,
+                run_mode=RunMode.TRAINING)
 
-                logger.info(f'Evaluate model.')
-                app.restore_ckpt()
-                self.predict_fold(
-                    app,
-                    postprocessor,
-                    test_data_loaders[fold],
-                    fold_output_folder,
-                    fold,
-                    run_mode=RunMode.TRAINING)
 
-    def predict(
-            self,
-            get_app_fns,
-            get_postprocessor_fns,
-            data_loaders,
-            checkpoint_paths,
-            run_mode,
-    ):
+def predict(
+    settings,
+    mlops_task=None,
+    architecture=None,
+    app=None,
+    test_dataset=None,
+    test_loader=None,
+    postprocessor=None,
+    run_mode=RunMode.INFERENCE
+):
 
-        # Test model for each fold
-        for idx in range(len(data_loaders)):
+    # Create test MLOps task
+    if mlops_task is None:
+        settings['mlops']['task_name'] = f'{settings["mlops"]["task_name"]}_test'
+        settings['mlops']['task_type'] = TaskTypes.testing
+        mlops_task = MLOpsTask(settings=settings['mlops'])
 
-            # Create application and postprocessor
-            app = get_app_fns[idx]()
-            postprocessor = get_postprocessor_fns[idx]()
+    # Log settings with MLOps task
+    if mlops_task.task is not None:
+        for key, value in settings.items():
+            mlops_task.log_configuration(value, key)
 
-            # Update simulation directory for current fold
-            output_folder = os.path.join(self.settings['output_folder'], str(idx))
-            os.makedirs(output_folder)
+    # Test model for each fold
+    for idx in range(len(test_loader)):
 
-            # Restore checkpoint
-            logger.info(f'Restore checkpoint {checkpoint_paths[idx]}.')
-            app.restore_ckpt(checkpoint_paths[idx])
+        # Get app
+        logger.info(f'Get application.')
+        fold_app = _get_app(
+            settings=settings,
+            mlops_task=mlops_task,
+            architecture=architecture,
+            app=app
+        )
 
-            # Predict
-            logger.info(f'Predict.')
-            self.predict_fold(
-                app,
-                postprocessor,
-                data_loaders[idx],
-                output_folder,
-                idx,
-                run_mode=run_mode
-            )
+        # Get postprocessor
+        fold_postprocessor = _get_postprocessor(
+            settings=settings,
+            mlops_task=mlops_task,
+            postprocessor=postprocessor,
+            dataframe=test_loader[idx].dataset.dataframe
+        )
+
+        # Update simulation directory for current fold
+        output_folder = os.path.join(settings['manager']['output_folder'], 'test', str(idx))
+        os.makedirs(output_folder)
+
+        # Restore checkpoint
+        fold_app.restore_ckpt(settings['test']['checkpoints'][idx])
+
+        # Predict
+        logger.info(f'Predict.')
+        _predict_fold(
+            mlops_task,
+            fold_app,
+            fold_postprocessor,
+            test_loader[idx],
+            output_folder,
+            idx,
+            run_mode=run_mode
+        )

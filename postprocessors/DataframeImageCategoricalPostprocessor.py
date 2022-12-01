@@ -6,10 +6,10 @@ from loguru import logger
 from scipy import special
 from sklearn import metrics as skl_metrics
 
-from postprocessors.BasePostProcessor import BasePostProcessor
-from utils.plots_matplotlib import confusion_matrix_plot
-from utils.plots_mlops import metric_vs_discarded_samples_plot
-from utils.metrics import categorical_classification_metrics, metric_vs_discarded_samples
+from simple_converge.postprocessors.BasePostProcessor import BasePostProcessor
+from simple_converge.utils.plots_matplotlib import confusion_matrix_plot
+from simple_converge.utils.plots_mlops import metric_vs_discarded_samples_plot
+from simple_converge.utils.metrics import categorical_classification_metrics, metric_vs_discarded_samples
 
 
 default_postprocessor_settings = {
@@ -27,11 +27,12 @@ class DataframeImageCategoricalPostprocessor(BasePostProcessor):
     def __init__(
             self,
             settings,
-            dataset_df):
+            mlops_task,
+            dataframe):
 
-        super(DataframeImageCategoricalPostprocessor, self).__init__(settings)
+        super(DataframeImageCategoricalPostprocessor, self).__init__(settings, mlops_task)
 
-        self.dataset_df = dataset_df
+        self.dataset_df = dataframe
 
         self.predicted_labels_list = list()
         self.gt_labels_list = list()
@@ -59,12 +60,12 @@ class DataframeImageCategoricalPostprocessor(BasePostProcessor):
         gt_labels = data[1]  # There is an assumption that data[1] contains ground truth labels
 
         self.predicted_labels = predicted_labels
-        self.gt_labels = gt_labels
-        self.gt_labels_one_hot = np.eye(len(self.settings['labels']))[gt_labels]
+        self.gt_labels = gt_labels.numpy()
+        self.gt_labels_one_hot = np.eye(len(self.settings['labels']))[gt_labels.numpy()]
         self.predicted_probs = predictions
 
         self.predicted_labels_list.append(predicted_labels)
-        self.gt_labels_list.append(gt_labels)
+        self.gt_labels_list.append(gt_labels.numpy())
         self.gt_labels_one_hot_list.append(self.gt_labels_one_hot)
         self.predicted_probs_list.append(predictions)
 
