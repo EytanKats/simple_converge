@@ -1,5 +1,6 @@
 import abc
 import torch
+import simple_converge as sc
 
 
 default_settings = {
@@ -35,9 +36,10 @@ class BaseApp(abc.ABC):
             self.losses_names = [_loss.__name__ for _loss in self.losses_fns]
             self.losses_num = len(self.losses_names)
         else:
-            self.losses_fns = []
-            self.losses_names = []
-            self.losses_num = 0
+            self.losses_fns = [sc.loss_functions.Registry[loss_name](settings)
+                               for loss_name in settings['loss']['registry_name']]
+            self.losses_names = [_loss.__name__ for _loss in self.losses_fns]
+            self.losses_num = len(self.losses_names)
 
         if metric is not None:
             self.metrics_fns = metric(settings)
@@ -45,8 +47,8 @@ class BaseApp(abc.ABC):
             self.metrics_num = len(self.metrics_names)
         else:
             self.metrics_fns = []
-            self.metrics_names = []
-            self.metrics_num = 0
+            self.metrics_names = [_metric.__name__ for _metric in self.metrics_fns]
+            self.metrics_num = len(self.metrics_names)
 
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
