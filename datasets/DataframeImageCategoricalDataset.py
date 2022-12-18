@@ -1,7 +1,7 @@
 import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
-from simple_converge.datasets.BaseDataframeDataset import BaseDataframeDataset
+from simple_converge.datasets.DataframeSupervisedDataset import DataframeSupervisedDataset
 
 
 default_settings = {
@@ -11,7 +11,7 @@ default_settings = {
 }
 
 
-class DataframeImageCategoricalDataset(BaseDataframeDataset, Dataset):
+class DataframeImageCategoricalDataset(DataframeSupervisedDataset, Dataset):
 
     def __init__(
             self,
