@@ -4,7 +4,6 @@ from loguru import logger
 from simple_converge.apps.BaseApp import BaseApp
 
 default_settings = {
-    'use_ema': False,
     'ema_decay': 0.999
 }
 
@@ -26,7 +25,7 @@ class MomentumApp(BaseApp):
             loss_function,
             metric,
             scheduler,
-            optimizer,
+            optimizer
     ):
         """
         This method initializes parameters
@@ -52,7 +51,7 @@ class MomentumApp(BaseApp):
         # Initialize parameters of momentum encoder
         for param_b, param_m in zip(self.base_encoder.parameters(), self.momentum_encoder.parameters()):
             param_m.data.copy_(param_b.data)  # initialize
-            param_m.requires_grad = False  # not update by gradient
+            param_m.requires_grad = False  # prevent update by gradient
 
         if optimizer is not None:
             # Instantiate optimizer for base encoder and predictor but not for the momentum encoder
@@ -64,6 +63,8 @@ class MomentumApp(BaseApp):
             self.scheduler = scheduler(settings, self.optimizer)
         else:
             self.scheduler = None
+
+        self.ema_decay = self.settings['app']['ema_decay']
 
         self.ckpt_cnt = 0
         self.latest_ckpt_path = None
