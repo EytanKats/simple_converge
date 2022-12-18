@@ -11,6 +11,8 @@ class ContrastiveLoss(torch.nn.Module):
     def __init__(self, settings):
         super(ContrastiveLoss, self).__init__()
 
+        self.__name__ = 'ContrastiveLoss'
+
         self.temperature = settings['loss']['temperature']
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
