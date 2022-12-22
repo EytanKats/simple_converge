@@ -19,13 +19,13 @@ def _create_output_folder(settings):
     """
 
     if not os.path.exists(settings["output_folder"]):
-        print(f'Create output folder {settings["output_folder"]}.')
+        logger.info(f'Create output folder {settings["output_folder"]}.')
         os.makedirs(settings["output_folder"])
         return True
 
     else:
-        print(f'Output folder {settings["output_folder"]} already exists.'
-              f'\nSpecify new output folder.')
+        logger.info(f'Output folder {settings["output_folder"]} already exists.'
+                    f'\nSpecify new output folder.')
         return False
 
 
