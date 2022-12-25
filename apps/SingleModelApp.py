@@ -6,6 +6,9 @@ from simple_converge.apps.BaseApp import BaseApp
 
 
 default_settings = {
+    'use_reduce_lr_on_plateau': False,
+    'reduce_lr_on_plateau_factor': 0.8,
+    'reduce_lr_on_plateau_min': 1e-6,
     'use_ema': False,
     'ema_decay': 0.999
 }
@@ -80,17 +83,32 @@ class SingleModelApp(BaseApp):
 
     def get_lr(self):
         for param_group in self.optimizer.param_groups:
-            return param_group['lr']
+            return {'base_lr': param_group['lr']}
 
-    def set_lr(self, lr):
+    def _set_lr(self, lr):
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = lr
 
-    def apply_scheduler(self):
+    def _apply_scheduler(self):
         if self.scheduler is not None:
             self.scheduler.step()
 
-    def training_step(self, data, epoch):
+    def on_epoch_start(self):
+        pass
+
+    def on_epoch_end(self, is_plateau=False):
+
+        # Reduce learning rate on plateau
+        if is_plateau and self.settings['app']['use_reduce_lr_on_plateau']:
+            cur_lr = self.get_lr()['base_lr']
+            if cur_lr > self.settings['app']['reduce_lr_on_plateau_min']:
+                reduced_lr = cur_lr * self.settings['reduce_lr_on_plateau_factor']
+                self._set_lr(reduced_lr)
+
+        # Apply scheduler
+        self._apply_scheduler()
+
+    def training_step(self, data, epoch, cur_iteration, iterations_per_epoch):
 
         self.model.train()
 

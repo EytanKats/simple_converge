@@ -65,11 +65,11 @@ class BaseApp(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def set_lr(self, lr):
+    def on_epoch_start(self):
         pass
 
     @abc.abstractmethod
-    def apply_scheduler(self):
+    def on_epoch_end(self, is_plateau=False):
         pass
 
     @abc.abstractmethod

@@ -114,15 +114,17 @@ class MomentumApp(BaseApp):
 
     def get_lr(self):
         for param_group in self.optimizer.param_groups:
-            return param_group['lr']
+            return {'base_lr': param_group['lr']}
 
-    def set_lr(self, lr):
+    def _set_lr(self, lr):
         for param_group in self.optimizer.param_groups:
             param_group['lr'] = lr
 
-    def apply_scheduler(self):
-        if self.scheduler is not None:
-            self.scheduler.step()
+    def on_epoch_start(self):
+        pass
+
+    def on_epoch_end(self, is_plateau=False):
+        pass
 
     @torch.no_grad()
     def _update_momentum_encoder_and_projector(self, m):
