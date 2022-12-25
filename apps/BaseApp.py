@@ -20,7 +20,7 @@ class BaseApp(abc.ABC):
             mlops_task,
             loss_function,
             metric,
-        ):
+    ):
         
         """
         This method initializes parameters.
@@ -73,11 +73,11 @@ class BaseApp(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def training_step(self, data, epoch):
+    def training_step(self, data, epoch, cur_iteration, iterations_per_epoch):
         pass
 
     @abc.abstractmethod
-    def validation_step(self, data, epoch):
+    def validation_step(self, data, epoch, cur_iteration, iterations_per_epoch):
         pass
 
     @abc.abstractmethod

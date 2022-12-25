@@ -1,10 +1,12 @@
+import math
 import torch
 from loguru import logger
 
 from simple_converge.apps.BaseApp import BaseApp
 
 default_settings = {
-    'ema_decay': 0.999
+    'momentum': 0.999,
+    'warmup_epochs': 10
 }
 
 
@@ -68,13 +70,12 @@ class MomentumApp(BaseApp):
             self.optimizer = optimizer(settings, self.base_encoder, self.base_projector, self.predictor)
         else:
             self.optimizer = None
+        self.initial_lr = self.get_lr()['base_lr']  # initial LR is used in 'adjust_lr' method
 
         if scheduler is not None:
             self.scheduler = scheduler(settings, self.optimizer)
         else:
             self.scheduler = None
-
-        self.ema_decay = self.settings['app']['ema_decay']
 
         self.ckpt_cnt = 0
         self.latest_ckpt_path = None
@@ -137,7 +138,37 @@ class MomentumApp(BaseApp):
         for param_b, param_m in zip(self.base_projector.parameters(), self.momentum_projector.parameters()):
             param_m.data = param_m.data * m + param_b.data * (1. - m)
 
-    def training_step(self, data, epoch):
+    def adjust_lr(self, epoch):
+        """
+        This method decays learning rate with half-cycle cosine after warmup
+        """
+
+        if epoch < self.settings['app']['warmup_epochs']:
+            lr = self.initial_lr * epoch / self.settings['app']['warmup_epochs']
+        else:
+            lr = self.initial_lr * 0.5 *\
+                 (1. + math.cos(math.pi * (epoch - self.settings['app']['warmup_epochs'])
+                                / (self.settings['trainer']['epochs'] - self.settings['app']['warmup_epochs'])))
+
+        self._set_lr(lr)
+        return lr
+
+    def apply_momentum_update(self, epoch):
+
+        """
+        Adjust momentum based on current epoch
+        """
+
+        m = 1. - 0.5 * (1. + math.cos(math.pi * epoch / self.settings['trainer']['epochs']))\
+            * (1. - self.settings['app']['momentum'])
+        self._update_momentum_encoder_and_projector(m)
+
+        return m
+
+    def training_step(self, data, epoch, cur_iteration, iterations_per_epoch):
+
+        self.adjust_lr(epoch + cur_iteration / iterations_per_epoch)
+        self.apply_momentum_update(epoch + cur_iteration / iterations_per_epoch)
 
         self.base_encoder.train()
         self.base_projector.train()
@@ -162,7 +193,6 @@ class MomentumApp(BaseApp):
         predictions_2 = self.predictor(base_projections_2)
 
         with torch.no_grad():  # disable gradient calculation
-            self._update_momentum_encoder_and_projector(self.ema_decay)  # update the momentum encoder
 
             # Compute features of momentum encoder
             momentum_features_1 = self.momentum_encoder(view_1)
@@ -193,7 +223,7 @@ class MomentumApp(BaseApp):
 
         return batch_loss_list, batch_metric_list
 
-    def validation_step(self, data, epoch):
+    def validation_step(self, data, epoch, cur_iteration, iterations_per_epoch):
 
         self.base_encoder.eval()
         self.base_projector.eval()

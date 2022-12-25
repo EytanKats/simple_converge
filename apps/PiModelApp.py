@@ -52,7 +52,7 @@ class PiModelApp(SingleModelApp):
 
         self.bn_controller = BnController()
 
-    def training_step(self, data, epoch):
+    def training_step(self, data, epoch, cur_iteration, iterations_per_epoch):
 
         """
         Training step for Pi Model application.
@@ -122,7 +122,7 @@ class PiModelApp(SingleModelApp):
 
         return batch_loss_list, batch_metric_list
 
-    def validation_step(self, data, epoch):
+    def validation_step(self, data, epoch, cur_iteration, iterations_per_epoch):
 
         """
         Validation step for Pi Model application.

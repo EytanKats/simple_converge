@@ -153,8 +153,9 @@ class Trainer(object):
             batch_metrics_history = np.zeros([0, app.metrics_num])
 
             # Training mini-batches loop
-            for batch_data in tqdm(train_data_loader, desc='Training'):
-                loss_list, metric_list = app.training_step(batch_data, epoch)
+            iterations_per_epoch = len(train_data_loader)
+            for cur_iteration, batch_data in enumerate(tqdm(train_data_loader, desc='Training')):
+                loss_list, metric_list = app.training_step(batch_data, epoch, cur_iteration, iterations_per_epoch)
                 batch_loss_history = np.concatenate([batch_loss_history, np.reshape(loss_list, newshape=(1, app.losses_num))], axis=0)
                 batch_metrics_history = np.concatenate([batch_metrics_history, np.reshape(metric_list, newshape=(1, app.metrics_num))], axis=0)
 
@@ -189,8 +190,9 @@ class Trainer(object):
             batch_metrics_history = np.zeros([0, app.metrics_num])
 
             # Validation mini-batches loop
-            for batch_data in tqdm(val_data_loader, desc="Validation"):
-                loss_list, metric_list = app.validation_step(batch_data, epoch)
+            iterations_per_epoch = len(val_data_loader)
+            for cur_iteration, batch_data in enumerate(tqdm(val_data_loader, desc="Validation")):
+                loss_list, metric_list = app.validation_step(batch_data, epoch, cur_iteration, iterations_per_epoch)
                 batch_loss_history = np.concatenate([batch_loss_history, np.reshape(loss_list, newshape=(1, app.losses_num))], axis=0)
                 batch_metrics_history = np.concatenate([batch_metrics_history, np.reshape(metric_list, newshape=(1, app.metrics_num))], axis=0)
 
