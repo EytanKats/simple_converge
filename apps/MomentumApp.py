@@ -68,9 +68,10 @@ class MomentumApp(BaseApp):
         if optimizer is not None:
             # Instantiate optimizer for base encoder and predictor but not for the momentum encoder
             self.optimizer = optimizer(settings, self.base_encoder, self.base_projector, self.predictor)
+            self.initial_lr = self.get_lr()['base_lr']  # initial LR is used in 'adjust_lr' method
         else:
             self.optimizer = None
-        self.initial_lr = self.get_lr()['base_lr']  # initial LR is used in 'adjust_lr' method
+            self.initial_lr = None
 
         if scheduler is not None:
             self.scheduler = scheduler(settings, self.optimizer)
