@@ -1,5 +1,7 @@
 from .DataframeImageCategoricalPostprocessor import DataframeImageCategoricalPostprocessor
+from .DataframeImageRepresentationPostprocessor import DataframeImageRepresentationPostprocessor
 
 Registry = {
-    'DataframeImageCategoricalPostprocessor': DataframeImageCategoricalPostprocessor
+    'DataframeImageCategoricalPostprocessor': DataframeImageCategoricalPostprocessor,
+    'DataframeImageRepresentationPostprocessor': DataframeImageRepresentationPostprocessor
 }
