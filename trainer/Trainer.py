@@ -138,10 +138,10 @@ class Trainer(object):
             lr_list = list()
             for lr_idx, (key, value) in enumerate(current_lr.items()):
                 logger.info(f'Learning rate: {key} = {value}')
-                lr_list.append(current_lr)
+                lr_list.append(current_lr[key])
 
                 # Log to MLOps Server
-                mlops_task.log_scalar_to_mlops_server(f'Learning rate', f'{key}_f{fold}', current_lr, epoch)
+                mlops_task.log_scalar_to_mlops_server(f'Learning rate', f'{key}_f{fold}', current_lr[key], epoch)
 
             lr_epoch_history = np.concatenate(
                 [lr_epoch_history, np.reshape(lr_list, newshape=(1, len(app.get_lr())))],
