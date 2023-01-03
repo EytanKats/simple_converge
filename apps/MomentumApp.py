@@ -68,10 +68,11 @@ class MomentumApp(BaseApp):
         if optimizer is not None:
             # Instantiate optimizer for base encoder and predictor but not for the momentum encoder
             self.optimizer = optimizer(settings, self.base_encoder, self.base_projector, self.predictor)
-            self.initial_lr = self.get_lr()['base_lr']  # initial LR is used in 'adjust_lr' method
+            self.anchor_lr = self.get_lr()['base_lr']  # initial LR is used in 'adjust_lr' method
+            self.adjust_lr(0)  # calculate initial learning rate
         else:
             self.optimizer = None
-            self.initial_lr = None
+            self.anchor_lr = None
 
         if scheduler is not None:
             self.scheduler = scheduler(settings, self.optimizer)
@@ -145,9 +146,9 @@ class MomentumApp(BaseApp):
         """
 
         if epoch < self.settings['app']['warmup_epochs']:
-            lr = self.initial_lr * epoch / self.settings['app']['warmup_epochs']
+            lr = self.anchor_lr * epoch / self.settings['app']['warmup_epochs']
         else:
-            lr = self.initial_lr * 0.5 *\
+            lr = self.anchor_lr * 0.5 *\
                  (1. + math.cos(math.pi * (epoch - self.settings['app']['warmup_epochs'])
                                 / (self.settings['trainer']['epochs'] - self.settings['app']['warmup_epochs'])))
 
