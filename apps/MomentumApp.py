@@ -275,19 +275,16 @@ class MomentumApp(BaseApp):
 
         self.base_encoder.eval()
 
-        view_1 = data[0].to(self.device)
-        view_2 = data[1].to(self.device)
+        data = data.to(self.device)
 
         with torch.no_grad():
 
             # Compute features of base encoder
-            base_features_1 = self.base_encoder(view_1)
-            base_features_2 = self.base_encoder(view_2)
+            base_features = self.base_encoder(data)
 
-        base_features_1 = base_features_1.detach().cpu().numpy()
-        base_features_2 = base_features_2.detach().cpu().numpy()
+        base_features = base_features.detach().cpu().numpy()
 
-        return [base_features_1, base_features_2]
+        return base_features
 
     def summary(self):
         logger.info("Base encoder architecture:")
