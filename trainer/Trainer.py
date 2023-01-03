@@ -40,7 +40,7 @@ class Trainer(object):
         self.monitor_best_val = 0
         self.ckpt_best_epoch = 0
         self.early_stopping_cnt = 0
-        self.reduce_lr_on_plateau_cnt = 0
+        self.plateau_cnt = 0
 
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -81,12 +81,12 @@ class Trainer(object):
             self.plateau_cnt = 1
             logger.info(f'Plateau count reset: {self.plateau_cnt - 1}')
             return False
-        elif self.reduce_lr_on_plateau_cnt < self.settings['plateau_patience']:
-            self.reduce_lr_on_plateau_cnt += 1
+        elif self.plateau_cnt < self.settings['plateau_patience']:
+            self.plateau_cnt += 1
             logger.info(f'Plateau count incremented: {self.plateau_cnt - 1}')
             return False
         else:
-            self.reduce_lr_on_plateau_cnt = 1
+            self.plateau_cnt = 1
             logger.info(f'Plateau detected')
             logger.info(f'Plateau count reset: {self.plateau_cnt - 1}')
             return True
