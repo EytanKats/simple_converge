@@ -214,8 +214,8 @@ class MomentumApp(BaseApp):
         batch_metric_list = list()
 
         for metric_fn in self.metrics_fns:
-            metric = metric_fn(predictions_1, momentum_projections_2)\
-                + metric_fn(predictions_2, momentum_projections_1)
+            metric = (metric_fn(predictions_1, momentum_projections_2)
+                + metric_fn(predictions_2, momentum_projections_1)) / 2
             batch_metric_list.append(metric.detach().cpu().numpy())
 
         # Backward pass
@@ -265,8 +265,8 @@ class MomentumApp(BaseApp):
             batch_metric_list = list()
 
             for metric_fn in self.metrics_fns:
-                metric = metric_fn(predictions_1, momentum_projections_2) \
-                    + metric_fn(predictions_2, momentum_projections_1)
+                metric = (metric_fn(predictions_1, momentum_projections_2)
+                    + metric_fn(predictions_2, momentum_projections_1)) / 2
                 batch_metric_list.append(metric.detach().cpu().numpy())
 
         return batch_loss_list, batch_metric_list
