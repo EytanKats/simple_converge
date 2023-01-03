@@ -35,8 +35,13 @@ class DataframeUnsupervisedDataset(BaseDataframeDataset):
         """
 
         data = self.get_data(self.dataframe.iloc[index])
+
         data = self.transform(data)
-        data = list(data)  # there is an assumption that self.transform returns tuple
+        if isinstance(data, tuple):  # transform can return tuple
+            data = list(data)
+        else:
+            data = [data]
+
         data.append(index)
 
         return data

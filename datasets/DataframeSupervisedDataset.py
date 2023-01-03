@@ -47,8 +47,10 @@ class DataframeSupervisedDataset(BaseDataframeDataset):
 
         data = self.get_data(self.dataframe.iloc[index])
         label = self.get_label(self.dataframe.iloc[index])
+
         data = self.transform(data, label)
-        data = list(data)  # there is an assumption that self.transform returns tuple
+        data = list(data)  # transform returns tuple, should be converted to list
+
         data.append(index)
 
         return data
