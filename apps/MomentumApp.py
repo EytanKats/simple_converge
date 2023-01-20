@@ -1,4 +1,6 @@
 import math
+import pathlib
+
 import torch
 from loguru import logger
 
@@ -83,6 +85,7 @@ class MomentumApp(BaseApp):
         self.latest_ckpt_path = None
 
     def restore_ckpt(self, ckpt_path=''):
+
         if ckpt_path:
             path_to_restore = ckpt_path
         else:
@@ -90,14 +93,46 @@ class MomentumApp(BaseApp):
 
         logger.info(f'Restore checkpoint {path_to_restore}')
         checkpoint = torch.load(ckpt_path)
-        self.base_encoder.load_state_dict(checkpoint['base_encoder'])
-        self.momentum_encoder.load_state_dict(checkpoint['momentum_encoder'])
-        self.base_projector.load_state_dict(checkpoint['base_projector'])
-        self.momentum_projector.load_state_dict(checkpoint['momentum_projector'])
-        self.predictor.load_state_dict(checkpoint['predictor'])
 
-        if self.optimizer is not None:
-            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        if pathlib.Path(path_to_restore).name == 'moco_v3_r-50-1000ep.pth.tar':  # loading MoCoV3 ResNet50 checkpoint pretrained on ImageNet
+            logger.info(f'Load MoCoV3 ResNet50 checkpoint pretrained on ImageNet for 1000 epochs')
+
+            # Rename keys of MoCoV3 state dictionary to be compatible with keys of MomentumApp state dictionary
+            base_encoder_state_dict = {}
+            momentum_encoder_state_dict = {}
+            base_projector_state_dict = {}
+            momentum_projector_state_dict = {}
+            predictor_state_dict = {}
+            for k in list(checkpoint['state_dict']):
+                if k.startswith('module.base_encoder.fc.'):
+                    base_projector_state_dict[k[len('module.base_encoder.fc.'):]] = checkpoint['state_dict'][k]
+                elif k.startswith('module.base_encoder.'):
+                    base_encoder_state_dict[k[len('module.base_encoder.'):]] = checkpoint['state_dict'][k]
+                elif k.startswith('module.momentum_encoder.fc.'):
+                    momentum_projector_state_dict[k[len('module.momentum_encoder.fc.'):]] = checkpoint['state_dict'][k]
+                elif k.startswith('module.momentum_encoder.'):
+                    momentum_encoder_state_dict[k[len('module.momentum_encoder.'):]] = checkpoint['state_dict'][k]
+                elif k.startswith('module.predictor.'):
+                    predictor_state_dict[k[len('module.predictor.'):]] = checkpoint['state_dict'][k]
+                else:
+                    logger.warning(f'Unknown key {k} in checkpoint to be restored {path_to_restore}')
+
+            # Load MoCoV3 weights
+            self.base_encoder.load_state_dict(base_encoder_state_dict)
+            self.momentum_encoder.load_state_dict(momentum_encoder_state_dict)
+            self.base_projector.load_state_dict(base_projector_state_dict)
+            self.momentum_projector.load_state_dict(momentum_projector_state_dict)
+            self.predictor.load_state_dict(predictor_state_dict)
+
+        else:
+            self.base_encoder.load_state_dict(checkpoint['base_encoder'])
+            self.momentum_encoder.load_state_dict(checkpoint['momentum_encoder'])
+            self.base_projector.load_state_dict(checkpoint['base_projector'])
+            self.momentum_projector.load_state_dict(checkpoint['momentum_projector'])
+            self.predictor.load_state_dict(checkpoint['predictor'])
+
+            if self.optimizer is not None:
+                self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
     def save_ckpt(self, ckpt_path):
 
