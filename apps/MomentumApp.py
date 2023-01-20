@@ -196,8 +196,9 @@ class MomentumApp(BaseApp):
         Adjust momentum based on current epoch
         """
 
-        m = 1. - 0.5 * (1. + math.cos(math.pi * epoch / self.settings['trainer']['epochs']))\
-            * (1. - self.settings['app']['momentum'])
+        effective_epoch = epoch + self.settings['app']['momentum_epochs_offset']
+        effective_epochs_num = self.settings['trainer']['epochs'] + self.settings['app']['momentum_epochs_offset']
+        m = 1. - 0.5 * (1. + math.cos(math.pi * effective_epoch / effective_epochs_num)) * (1. - self.settings['app']['momentum'])
         self._update_momentum_encoder_and_projector(m)
 
         return m
