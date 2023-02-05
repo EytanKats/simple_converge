@@ -122,12 +122,10 @@ class DataframeImageRepresentationPostprocessor(BasePostProcessor):
         logger.info('Save updated data file')
         self.dataset_df.to_csv(pathlib.Path(output_folder).joinpath('test_data_output.csv'), index=False)
 
-    @staticmethod
-    def _get_name_of_dir_for_closest_images(idx):
+    def _get_name_of_dir_for_closest_images(self, idx):
         return f'{idx}'
 
-    @staticmethod
-    def _get_closest_image_name(idx, rating):
+    def _get_closest_image_name(self, idx, rating):
         return f'r{rating}_{idx}.png'
 
 
