@@ -115,6 +115,9 @@ class DataframeImageRepresentationPostprocessor(BasePostProcessor):
                 alpha=1
             )
 
+            output_path = pathlib.Path(output_folder).joinpath(f'tsne_{column}.png')
+            plt.savefig(output_path)
+
         # Save updated data file with TSNE results
         logger.info('Save updated data file')
         self.dataset_df.to_csv(pathlib.Path(output_folder).joinpath('test_data_output.csv'), index=False)
