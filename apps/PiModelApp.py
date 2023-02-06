@@ -6,6 +6,9 @@ from simple_converge.apps.SingleModelApp import SingleModelApp
 
 
 default_settings = {
+    'use_reduce_lr_on_plateau': False,
+    'reduce_lr_on_plateau_factor': 0.8,
+    'reduce_lr_on_plateau_min': 1e-6,
     'max_consistency_loss_weight': 0,
     'consistency_ramp_up': 0,
     'no_label_idx': 0,
@@ -49,7 +52,7 @@ class PiModelApp(SingleModelApp):
 
         self.bn_controller = BnController()
 
-    def training_step(self, data, epoch):
+    def training_step(self, data, epoch, cur_iteration, iterations_per_epoch):
 
         """
         Training step for Pi Model application.
@@ -119,7 +122,7 @@ class PiModelApp(SingleModelApp):
 
         return batch_loss_list, batch_metric_list
 
-    def validation_step(self, data, epoch):
+    def validation_step(self, data, epoch, cur_iteration, iterations_per_epoch):
 
         """
         Validation step for Pi Model application.

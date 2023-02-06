@@ -19,13 +19,13 @@ def _create_output_folder(settings):
     """
 
     if not os.path.exists(settings["output_folder"]):
-        print(f'Create output folder {settings["output_folder"]}.')
+        logger.info(f'Create output folder {settings["output_folder"]}.')
         os.makedirs(settings["output_folder"])
         return True
 
     else:
-        print(f'Output folder {settings["output_folder"]} already exists.'
-              f'\nSpecify new output folder.')
+        logger.info(f'Output folder {settings["output_folder"]} already exists.'
+                    f'\nSpecify new output folder.')
         return False
 
 
@@ -271,8 +271,8 @@ def predict(
         for key, value in settings.items():
             mlops_task.log_configuration(value, key)
 
-    # Test model for each fold
-    for idx in range(len(test_loader)):
+    # Test model for each of active fold
+    for fold in settings["manager"]["active_folds"]:
 
         # Get app
         logger.info(f'Get application.')
@@ -288,15 +288,15 @@ def predict(
             settings=settings,
             mlops_task=mlops_task,
             postprocessor=postprocessor,
-            dataframe=test_loader[idx].dataset.dataframe
+            dataframe=test_loader[fold].dataset.dataframe
         )
 
         # Update simulation directory for current fold
-        output_folder = os.path.join(settings['manager']['output_folder'], 'test', str(idx))
+        output_folder = os.path.join(settings['manager']['output_folder'], 'test', str(fold))
         os.makedirs(output_folder)
 
         # Restore checkpoint
-        fold_app.restore_ckpt(settings['test']['checkpoints'][idx])
+        fold_app.restore_ckpt(settings['test']['checkpoints'][fold])
 
         # Predict
         logger.info(f'Predict.')
@@ -304,8 +304,8 @@ def predict(
             mlops_task,
             fold_app,
             fold_postprocessor,
-            test_loader[idx],
+            test_loader[fold],
             output_folder,
-            idx,
+            fold,
             run_mode=run_mode
         )

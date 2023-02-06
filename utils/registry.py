@@ -17,7 +17,7 @@ def register_app(app_name, app_class):
 
 def register_dataset(dataset_name, dataset_class):
     """
-    This method adds new application to applications registry
+    This method adds new dataset to datasets registry
 
     :param dataset_name: name of the dataset that can be used in settings
     :param dataset_class: class of the dataset that will be created and used
@@ -29,7 +29,7 @@ def register_dataset(dataset_name, dataset_class):
 
 def register_postprocessor(postprocessor_name, postprocessor_class):
     """
-    This method adds new application to applications registry
+    This method adds new postprocessor to postprocessors registry
 
     :param postprocessor_name: name of the postprocessor that can be used in settings
     :param postprocessor_class: class of the postprocessor that will be created and used

@@ -1,3 +1,6 @@
 from .Registry import Registry
 from .BaseDataframeDataset import BaseDataframeDataset
+from .DataframeSupervisedDataset import DataframeSupervisedDataset
+from .DataframeUnsupervisedDataset import DataframeUnsupervisedDataset
+from .DataframeImageDataset import DataframeImageDataset
 from .DataframeImageCategoricalDataset import DataframeImageCategoricalDataset

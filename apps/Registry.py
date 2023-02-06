@@ -1,7 +1,9 @@
 from .PiModelApp import PiModelApp
+from .MomentumApp import MomentumApp
 from .SingleModelApp import SingleModelApp
 
 Registry = {
     'SingleModelApp': SingleModelApp,
-    'PiModelApp': PiModelApp
+    'PiModelApp': PiModelApp,
+    'MomentumApp': MomentumApp
 }
