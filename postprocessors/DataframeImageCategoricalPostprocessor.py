@@ -110,7 +110,7 @@ class DataframeImageCategoricalPostprocessor(BasePostProcessor):
         accuracy = skl_metrics.accuracy_score(gt_labels, np.argmax(predicted_labels, axis=1))
         error_rate = 1 - accuracy
 
-        logger.info(f'\nACCURACY:{accuracy * 100:.1f}%')
+        logger.info(f'ACCURACY:{accuracy * 100:.1f}%')
         logger.info(f'ERROR RATE:{error_rate * 100:.1f}%')
 
         accuracy_df = pd.DataFrame(index=['overall_metrics'])
