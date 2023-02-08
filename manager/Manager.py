@@ -3,7 +3,6 @@ This file contains methods to fit and evaluate model and run inference
 """
 
 import os
-import glob
 from loguru import logger
 from clearml import TaskTypes
 
@@ -131,7 +130,7 @@ def _predict_fold(
         )
 
     # Calculate total metrics
-    if run_mode == RunMode.TEST:
+    if run_mode == RunMode.TEST or run_mode == RunMode.TRAINING:
         postprocessor.calculate_total_metrics(
             output_folder=output_folder,
             fold=fold,
@@ -227,9 +226,13 @@ def fit(
         )
 
         # Test model
-        if postprocessor is not None and test_loader is not None:
+        if test_loader is not None:
             logger.info(f'Evaluate model.')
             fold_app.restore_ckpt()
+
+            # Create test directory for current fold
+            fold_test_output_folder = os.path.join(fold_output_folder, 'test')
+            os.makedirs(fold_test_output_folder)
 
             # Get postprocessor
             fold_postprocessor = _get_postprocessor(
@@ -244,7 +247,7 @@ def fit(
                 fold_app,
                 fold_postprocessor,
                 test_loader[fold],
-                fold_output_folder,
+                fold_test_output_folder,
                 fold,
                 run_mode=RunMode.TRAINING)
 
