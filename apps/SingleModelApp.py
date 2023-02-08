@@ -67,7 +67,7 @@ class SingleModelApp(BaseApp):
             path_to_restore = self.latest_ckpt_path
 
         logger.info(f'Restore checkpoint {path_to_restore}')
-        self.model.load_state_dict(torch.load(ckpt_path))
+        self.model.load_state_dict(torch.load(path_to_restore))
 
     def save_ckpt(self, ckpt_path):
 
