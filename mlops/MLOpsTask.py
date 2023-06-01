@@ -3,18 +3,17 @@ from clearml import Task, TaskTypes
 default_mlops_settings = {
     'project_name': 'Default Project',
     'task_name': 'default_task',
-    'task_type': TaskTypes.training,
-    'connect_frameworks': {
-        'matplotlib': False,
-        'tensorflow': False,
-        'tensorboard': False,
-        'pytorch': False,
-        'xgboost': False,
-        'scikit': False,
-        'fastai': False,
-        'lightgbm': False,
-        'hydra': False
-    }
+    'task_type': 'training',
+    'tags': ['default_tag'],
+    'connect_arg_parser': False,
+    'connect_frameworks': False,
+    'resource_monitoring': True,
+    'connect_streams': True
+}
+
+task_type_map = {
+    'training': TaskTypes.training,
+    'testing': TaskTypes.testing
 }
 
 
@@ -47,11 +46,15 @@ class MLOpsTask(object):
         if self._task is not None:
             return self._task
 
-        self._task = Task.init(project_name=self.settings["project_name"],
-                               task_name=self.settings["task_name"],
-                               auto_connect_frameworks=self.settings["connect_frameworks"])
-
-        self._task.set_task_type(self.settings['task_type'])
+        task_type = task_type_map[self.settings['task_type']]
+        self._task = Task.init(project_name=self.settings['project_name'],
+                               task_name=self.settings['task_name'],
+                               task_type=task_type,
+                               tags=self.settings['tags'],
+                               auto_connect_arg_parser=self.settings['connect_arg_parser'],
+                               auto_connect_frameworks=self.settings['connect_frameworks'],
+                               auto_resource_monitoring=self.settings['resource_monitoring'],
+                               auto_connect_streams=self.settings['connect_streams'])
 
         return self._task
 
