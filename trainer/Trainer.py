@@ -46,7 +46,7 @@ class Trainer(object):
 
     def create_checkpoint(self, app, epoch, ckpt_path):
 
-        if epoch % self.settings['ckpt_freq'] != 0:
+        if (epoch + 1) % self.settings['ckpt_freq'] != 0:
             return
 
         if (self.settings['monitor_regime'] == "min" and self.monitor_cur_val < self.monitor_best_val) or \
@@ -189,44 +189,46 @@ class Trainer(object):
             batch_loss_history = np.zeros([0, app.losses_num])
             batch_metrics_history = np.zeros([0, app.metrics_num])
 
-            # Validation mini-batches loop
-            iterations_per_epoch = len(val_data_loader)
-            for cur_iteration, batch_data in enumerate(tqdm(val_data_loader, desc="Validation")):
-                loss_list, metric_list = app.validation_step(batch_data, epoch, cur_iteration, iterations_per_epoch)
-                batch_loss_history = np.concatenate([batch_loss_history, np.reshape(loss_list, newshape=(1, app.losses_num))], axis=0)
-                batch_metrics_history = np.concatenate([batch_metrics_history, np.reshape(metric_list, newshape=(1, app.metrics_num))], axis=0)
+            if (epoch + 1) % self.settings['val_freq'] == 0:
 
-            # Calculate and log mean validation loss for epoch
-            epoch_loss_list = list()
-            for loss_idx, loss_name in enumerate(app.losses_names):
-                batch_mean_single_loss = np.nanmean(batch_loss_history[:, loss_idx])
-                epoch_loss_list.append(batch_mean_single_loss)
+                # Validation mini-batches loop
+                iterations_per_epoch = len(val_data_loader)
+                for cur_iteration, batch_data in enumerate(tqdm(val_data_loader, desc="Validation")):
+                    loss_list, metric_list = app.validation_step(batch_data, epoch, cur_iteration, iterations_per_epoch)
+                    batch_loss_history = np.concatenate([batch_loss_history, np.reshape(loss_list, newshape=(1, app.losses_num))], axis=0)
+                    batch_metrics_history = np.concatenate([batch_metrics_history, np.reshape(metric_list, newshape=(1, app.metrics_num))], axis=0)
 
-                if f'{loss_name}' == self.settings['monitor']:
-                    self.monitor_cur_val = batch_mean_single_loss
+                # Calculate and log mean validation loss for epoch
+                epoch_loss_list = list()
+                for loss_idx, loss_name in enumerate(app.losses_names):
+                    batch_mean_single_loss = np.nanmean(batch_loss_history[:, loss_idx])
+                    epoch_loss_list.append(batch_mean_single_loss)
 
-                logger.info(f'Validation loss {loss_name}: {batch_mean_single_loss:.4f}')
+                    if f'{loss_name}' == self.settings['monitor']:
+                        self.monitor_cur_val = batch_mean_single_loss
 
-                # Log to MLOps server
-                mlops_task.log_scalar_to_mlops_server(f'loss_{loss_name}', f'val_{loss_name}_f{fold}', batch_mean_single_loss, epoch)
+                    logger.info(f'Validation loss {loss_name}: {batch_mean_single_loss:.4f}')
 
-            val_epoch_loss_history = np.concatenate([val_epoch_loss_history, np.reshape(epoch_loss_list, newshape=(1, app.losses_num))], axis=0)
+                    # Log to MLOps server
+                    mlops_task.log_scalar_to_mlops_server(f'loss_{loss_name}', f'val_{loss_name}_f{fold}', batch_mean_single_loss, epoch)
 
-            # Calculate and log mean validation metrics for epoch
-            epoch_metric_list = list()
-            for metric_idx, metric_name in enumerate(app.metrics_names):
-                batch_mean_single_metric = np.nanmean(batch_metrics_history[:, metric_idx])
-                epoch_metric_list.append(batch_mean_single_metric)
+                val_epoch_loss_history = np.concatenate([val_epoch_loss_history, np.reshape(epoch_loss_list, newshape=(1, app.losses_num))], axis=0)
 
-                if f'{metric_name}' == self.settings['monitor']:
-                    self.monitor_cur_val = batch_mean_single_metric
+                # Calculate and log mean validation metrics for epoch
+                epoch_metric_list = list()
+                for metric_idx, metric_name in enumerate(app.metrics_names):
+                    batch_mean_single_metric = np.nanmean(batch_metrics_history[:, metric_idx])
+                    epoch_metric_list.append(batch_mean_single_metric)
 
-                logger.info(f'Validation metric {metric_name}: {batch_mean_single_metric:.4f}')
+                    if f'{metric_name}' == self.settings['monitor']:
+                        self.monitor_cur_val = batch_mean_single_metric
 
-                # Log to MLOps server
-                mlops_task.log_scalar_to_mlops_server(f'metric_{metric_name}', f'val_{metric_name}_f{fold}', batch_mean_single_metric, epoch)
+                    logger.info(f'Validation metric {metric_name}: {batch_mean_single_metric:.4f}')
 
-            val_epoch_metrics_history = np.concatenate([val_epoch_metrics_history, np.reshape(epoch_metric_list, newshape=(1, app.metrics_num))], axis=0)
+                    # Log to MLOps server
+                    mlops_task.log_scalar_to_mlops_server(f'metric_{metric_name}', f'val_{metric_name}_f{fold}', batch_mean_single_metric, epoch)
+
+                val_epoch_metrics_history = np.concatenate([val_epoch_metrics_history, np.reshape(epoch_metric_list, newshape=(1, app.metrics_num))], axis=0)
 
             # Save checkpoint
             self.create_checkpoint(app, epoch, ckpt_path)
