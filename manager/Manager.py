@@ -184,12 +184,12 @@ def fit(
         fold_output_folder = os.path.join(settings['manager']['output_folder'], str(fold))
         os.makedirs(fold_output_folder)
 
-        # Save data log
-        logger.info(f'Save data log for current fold.')
-        train_loader[fold].dataset.save_dataframe(os.path.join(fold_output_folder, 'train_data'))
-        val_loader[fold].dataset.save_dataframe(os.path.join(fold_output_folder, 'val_data'))
-        if test_loader is not None:
-            test_loader[fold].dataset.save_dataframe(os.path.join(fold_output_folder, 'test_data'))
+        # TODO: find generic method to save data log
+        # logger.info(f'Save data log for current fold.')
+        # train_loader[fold].dataset.save_dataframe(os.path.join(fold_output_folder, 'train_data'))
+        # val_loader[fold].dataset.save_dataframe(os.path.join(fold_output_folder, 'val_data'))
+        # if test_loader is not None:
+        #     test_loader[fold].dataset.save_dataframe(os.path.join(fold_output_folder, 'test_data'))
 
         # Get app
         logger.info(f'Get application.')
