@@ -28,7 +28,7 @@ class SingleModelApp(BaseApp):
         loss_function,
         metric,
         scheduler,
-        optimizer,
+        optimizer
     ):
         
         """
@@ -40,10 +40,11 @@ class SingleModelApp(BaseApp):
             settings,
             mlops_task,
             loss_function,
-            metric,
+            metric
         )
 
         self.model = architecture(settings)
+        self.val_model = self.model
 
         if optimizer is not None:
             self.optimizer = optimizer(settings, self.model)
@@ -108,12 +109,18 @@ class SingleModelApp(BaseApp):
         # Apply scheduler
         self._apply_scheduler()
 
+    def parse_batch_data(self, data):
+        input_data = data[0]
+        labels = data[1]
+        return input_data, labels
+
     def training_step(self, data, epoch, cur_iteration, iterations_per_epoch):
 
         self.model.train()
 
-        input_data = data[0].to(self.device)
-        labels = data[1].to(self.device)
+        input_data, labels = self.parse_batch_data(data)
+        input_data = input_data.to(self.device)
+        labels = labels.to(self.device)
 
         self.optimizer.zero_grad()
 
@@ -151,13 +158,14 @@ class SingleModelApp(BaseApp):
         if self.settings['app']['use_ema']:
             self.ema.apply_shadow()
 
-        input_data = data[0].to(self.device)
-        labels = data[1].to(self.device)
+        input_data, labels = self.parse_batch_data(data)
+        input_data = input_data.to(self.device)
+        labels = labels.to(self.device)
 
         with torch.set_grad_enabled(False):
 
             # Apply model
-            model_output = self.model(input_data)
+            model_output = self.val_model(input_data)
 
             # Calculate loss
             batch_loss_list = list()
