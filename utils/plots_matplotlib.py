@@ -300,28 +300,38 @@ def overlay_plot(image,
     plt.close()
 
 
-def bar_plot(groups, save_plot=False, output_plot_path=""):
+def bar_plot(groups,
+             title='',
+             save_plot=False,
+             output_plot_path="",
+             fig_size=(10, 5.5)):
 
     """
     This method build bar plot from the pandas series.
     :param groups: pandas series
                    index of the series contains x-axis names, values of the series defines height of the bars
+    :param title: title of the plot
     :param save_plot: if True the plot will be saved
-                       if False the plot will be shown
+                      if False the plot will be shown
     :param output_plot_path: path to save plot
+    :param fig_size: size of the plot
     :return: None
     """
 
     x = groups.index.values.tolist()
     y = groups.values.tolist()
 
-    plt.figure()
+    plt.figure(figsize=fig_size)
     groups_plot = sns.barplot(x=x, y=y)
     for idx, count in enumerate(y):
         groups_plot.text(idx, count, count, color="black", ha="center")
 
     plt.xticks(range(0, len(x)), x, rotation="vertical")
     plt.tight_layout()  # this prevents clipping of bar names
+    plt.subplots_adjust(top=0.85)  # this prevents clipping of the title
+
+    plt.title(title)
+
     if save_plot:
         plt.savefig(output_plot_path)
     else:
