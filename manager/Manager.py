@@ -158,13 +158,7 @@ def fit(
 
     # Create training MLOps task
     if mlops_task is None:
-        settings['mlops']['task_type'] = TaskTypes.training
-        mlops_task = MLOpsTask(settings=settings['mlops'])
-
-    # Log settings with MLOps task
-    if mlops_task.task is not None:
-        for key, value in settings.items():
-            mlops_task.log_configuration(value, key)
+        mlops_task = MLOpsTask(settings=settings)
 
     # Create output folder
     if not _create_output_folder(settings['manager']):
