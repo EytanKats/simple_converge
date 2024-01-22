@@ -104,7 +104,7 @@ def _predict_fold(
     for test_data in test_data_loader:
 
         # Calculate predictions
-        test_predictions = app.predict(test_data[0])  # There is an assumption that test_data[0] contains model input data
+        test_predictions = app.predict(test_data)
 
         # Apply postprocessing
         postprocessor.postprocess_predictions(
