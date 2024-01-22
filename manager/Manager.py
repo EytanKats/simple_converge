@@ -77,14 +77,12 @@ def _get_postprocessor(
     if postprocessor is None:
         _fold_postprocessor = sc.postprocessors.Registry[settings['postprocessor']['registry_name']](
             settings['postprocessor'],
-            mlops_task=mlops_task,
-            dataframe=dataframe
+            mlops_task=mlops_task
         )
     else:
         _fold_postprocessor = postprocessor(
             settings['postprocessor'],
-            mlops_task=mlops_task,
-            dataframe=dataframe
+            mlops_task=mlops_task
         )
 
     return _fold_postprocessor
