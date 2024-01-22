@@ -259,14 +259,7 @@ def predict(
 
     # Create test MLOps task
     if mlops_task is None:
-        settings['mlops']['task_name'] = f'{settings["mlops"]["task_name"]}_test'
-        settings['mlops']['task_type'] = TaskTypes.testing
-        mlops_task = MLOpsTask(settings=settings['mlops'])
-
-    # Log settings with MLOps task
-    if mlops_task.task is not None:
-        for key, value in settings.items():
-            mlops_task.log_configuration(value, key)
+        mlops_task = MLOpsTask(settings=settings)
 
     # Test model for each of active fold
     for fold in settings["manager"]["active_folds"]:
