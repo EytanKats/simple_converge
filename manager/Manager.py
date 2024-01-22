@@ -3,6 +3,7 @@ This file contains methods to fit and evaluate model and run inference
 """
 
 import os
+import json
 import time
 import pathlib
 from loguru import logger
@@ -147,6 +148,10 @@ def fit(
     settings["output_folder"] = str(pathlib.Path(settings["output_folder"]).parent.joinpath(pathlib.Path(settings["output_folder"]).name + time.strftime("_%Y%m%d-%H%M%S")))
     os.makedirs(settings["output_folder"])
 
+    # Save settings file into output folder
+    with open(os.path.join(settings["output_folder"], 'settings.json'), 'w') as fp:
+        json.dump(settings, fp, indent=4)
+
     # Create trainer
     trainer = Trainer(settings['trainer'])
 
@@ -265,6 +270,10 @@ def predict(
         # Update simulation directory for current fold
         output_folder = os.path.join(settings['manager']['output_folder'], 'test' + time.strftime("_%Y%m%d-%H%M%S"), str(fold))
         os.makedirs(output_folder)
+
+        # Save settings file into output folder
+        with open(os.path.join(output_folder, 'settings.json'), 'w') as fp:
+            json.dump(settings, fp, indent=4)
 
         # Restore checkpoint
         fold_app.restore_ckpt(settings['test']['checkpoints'][fold])
