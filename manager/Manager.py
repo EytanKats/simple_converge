@@ -3,6 +3,8 @@ This file contains methods to fit and evaluate model and run inference
 """
 
 import os
+import time
+import pathlib
 from loguru import logger
 from clearml import TaskTypes
 
@@ -10,22 +12,6 @@ import simple_converge as sc
 from simple_converge.trainer import Trainer
 from simple_converge.utils.RunMode import RunMode
 from simple_converge.mlops.MLOpsTask import MLOpsTask
-
-
-def _create_output_folder(settings):
-    """
-    This method checks that simulation folder doesn't exist and create it
-    """
-
-    if not os.path.exists(settings["output_folder"]):
-        logger.info(f'Create output folder {settings["output_folder"]}.')
-        os.makedirs(settings["output_folder"])
-        return True
-
-    else:
-        logger.info(f'Output folder {settings["output_folder"]} already exists.'
-                    f'\nSpecify new output folder.')
-        return False
 
 
 def _get_app(
@@ -158,8 +144,8 @@ def fit(
         mlops_task = MLOpsTask(settings=settings)
 
     # Create output folder
-    if not _create_output_folder(settings['manager']):
-        exit(0)
+    settings["output_folder"] = str(pathlib.Path(settings["output_folder"]).parent.joinpath(pathlib.Path(settings["output_folder"]).name + time.strftime("_%Y%m%d-%H%M%S")))
+    os.makedirs(settings["output_folder"])
 
     # Create trainer
     trainer = Trainer(settings['trainer'])
@@ -222,7 +208,7 @@ def fit(
             fold_app.restore_ckpt()
 
             # Create test directory for current fold
-            fold_test_output_folder = os.path.join(fold_output_folder, 'test')
+            fold_test_output_folder = os.path.join(settings['manager']['output_folder'], 'test', str(fold))
             os.makedirs(fold_test_output_folder)
 
             # Get postprocessor
@@ -277,7 +263,7 @@ def predict(
         )
 
         # Update simulation directory for current fold
-        output_folder = os.path.join(settings['manager']['output_folder'], 'test', str(fold))
+        output_folder = os.path.join(settings['manager']['output_folder'], 'test' + time.strftime("_%Y%m%d-%H%M%S"), str(fold))
         os.makedirs(output_folder)
 
         # Restore checkpoint
