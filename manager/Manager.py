@@ -67,7 +67,6 @@ def _get_app(
 
 def _get_postprocessor(
     settings,
-    dataframe,
     mlops_task=None,
     postprocessor=None
 
@@ -232,8 +231,7 @@ def fit(
             fold_postprocessor = _get_postprocessor(
                 settings=settings,
                 mlops_task=mlops_task,
-                postprocessor=postprocessor,
-                dataframe=test_loader[fold].dataset.dataframe
+                postprocessor=postprocessor
             )
 
             _predict_fold(
@@ -277,8 +275,7 @@ def predict(
         fold_postprocessor = _get_postprocessor(
             settings=settings,
             mlops_task=mlops_task,
-            postprocessor=postprocessor,
-            dataframe=test_loader[fold].dataset.dataframe
+            postprocessor=postprocessor
         )
 
         # Update simulation directory for current fold

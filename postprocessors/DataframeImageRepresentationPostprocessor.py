@@ -25,12 +25,11 @@ class DataframeImageRepresentationPostprocessor(BasePostProcessor):
     def __init__(
             self,
             settings,
-            mlops_task,
-            dataframe):
+            mlops_task):
 
         super(DataframeImageRepresentationPostprocessor, self).__init__(settings, mlops_task)
 
-        self.dataset_df = dataframe
+        self.dataset_df = None  # TODO: dataset dataframe should be loaded based on information in settings file
         self.features_list = list()
 
         self.features = None

@@ -27,12 +27,11 @@ class DataframeImageCategoricalPostprocessor(BasePostProcessor):
     def __init__(
             self,
             settings,
-            mlops_task,
-            dataframe):
+            mlops_task):
 
         super(DataframeImageCategoricalPostprocessor, self).__init__(settings, mlops_task)
 
-        self.dataset_df = dataframe
+        self.dataset_df = None  # TODO: dataset dataframe should be loaded based on information in settings file
 
         self.predicted_labels_list = list()
         self.gt_labels_list = list()
