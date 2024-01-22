@@ -19,7 +19,7 @@ class BaseApp(abc.ABC):
             settings,
             mlops_task,
             loss_function,
-            metric,
+            metric
     ):
         
         """
@@ -35,20 +35,20 @@ class BaseApp(abc.ABC):
             self.losses_fns = loss_function(settings)
             self.losses_names = [_loss.__name__ for _loss in self.losses_fns]
             self.losses_num = len(self.losses_names)
-        else:
+        elif 'registry_name' in settings['loss']:
             self.losses_fns = [sc.loss_functions.Registry[loss_name](settings)
                                for loss_name in settings['loss']['registry_name']]
             self.losses_names = [_loss.__name__ for _loss in self.losses_fns]
             self.losses_num = len(self.losses_names)
+        else:
+            self.losses_fns = None
 
         if metric is not None:
             self.metrics_fns = metric(settings)
             self.metrics_names = [_metric.__name__ for _metric in self.metrics_fns]
             self.metrics_num = len(self.metrics_names)
         else:
-            self.metrics_fns = []
-            self.metrics_names = [_metric.__name__ for _metric in self.metrics_fns]
-            self.metrics_num = len(self.metrics_names)
+            self.metrics_fns = None
 
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
