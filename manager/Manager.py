@@ -7,7 +7,6 @@ import json
 import time
 import pathlib
 from loguru import logger
-from clearml import TaskTypes
 
 import simple_converge as sc
 from simple_converge.trainer import Trainer
@@ -63,12 +62,12 @@ def _get_postprocessor(
     # else call the custom 'app' method
     if postprocessor is None:
         _fold_postprocessor = sc.postprocessors.Registry[settings['postprocessor']['registry_name']](
-            settings['postprocessor'],
+            settings,
             mlops_task=mlops_task
         )
     else:
         _fold_postprocessor = postprocessor(
-            settings['postprocessor'],
+            settings,
             mlops_task=mlops_task
         )
 

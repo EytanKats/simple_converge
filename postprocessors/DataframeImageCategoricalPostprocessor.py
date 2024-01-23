@@ -50,9 +50,9 @@ class DataframeImageCategoricalPostprocessor(BasePostProcessor):
             run_mode
     ):
 
-        if self.settings['activation'] == 'sigmoid':
+        if self.settings['postprocessor']['activation'] == 'sigmoid':
             predictions = special.expit(predictions)
-        elif self.settings['activation'] == 'softmax':
+        elif self.settings['postprocessor']['activation'] == 'softmax':
             predictions = special.softmax(predictions, axis=-1)
 
         predicted_labels = np.eye(len(predictions[0]))[np.argmax(predictions, axis=1)]
@@ -60,7 +60,7 @@ class DataframeImageCategoricalPostprocessor(BasePostProcessor):
 
         self.predicted_labels = predicted_labels
         self.gt_labels = gt_labels.numpy()
-        self.gt_labels_one_hot = np.eye(len(self.settings['labels']))[gt_labels.numpy()]
+        self.gt_labels_one_hot = np.eye(len(self.settings['postprocessor']['labels']))[gt_labels.numpy()]
         self.predicted_probs = predictions
 
         self.predicted_labels_list.append(predicted_labels)
@@ -119,7 +119,7 @@ class DataframeImageCategoricalPostprocessor(BasePostProcessor):
         accuracy_df.to_csv(accuracy_file_path, float_format='%.1f')
 
         # Per class classification report
-        if self.settings['per_class_classification_report']:
+        if self.settings['postprocessor']['per_class_classification_report']:
             metric_scores = categorical_classification_metrics(
                 predicted_labels=predicted_labels,
                 predicted_probs=predicted_probs,
@@ -148,7 +148,7 @@ class DataframeImageCategoricalPostprocessor(BasePostProcessor):
             logger.info(f'mean precision: {metric_scores["prec"][-1]:.1f}%')
             logger.info(f'mean f1: {metric_scores["f1"][-1]:.1f}%')
 
-            for label_idx, label in enumerate(self.settings['labels']):
+            for label_idx, label in enumerate(self.settings['postprocessor']['labels']):
                 logger.info(f'\n{label.upper()} METRICS:')
                 logger.info(f'{label} auc: {(metric_scores["auc"][label_idx]):.1f}%')
                 logger.info(f'{label} accuracy: {(metric_scores["acc"][label_idx]):.1f}%')
@@ -158,21 +158,21 @@ class DataframeImageCategoricalPostprocessor(BasePostProcessor):
                 logger.info(f'{label} f1: {(metric_scores["f1"][label_idx]):.1f}%')
 
             metrics_df = pd.DataFrame.from_dict(metric_scores, orient='index')
-            metrics_df_columns = copy.deepcopy(self.settings['labels'])
+            metrics_df_columns = copy.deepcopy(self.settings['postprocessor']['labels'])
             metrics_df_columns.append('mean')
             metrics_df.columns = metrics_df_columns
             metrics_file_path = os.path.join(output_folder, 'metrics.csv')
             metrics_df.to_csv(metrics_file_path, float_format='%.1f')
 
         # Confusion matrix
-        if self.settings['confusion_matrix']:
+        if self.settings['postprocessor']['confusion_matrix']:
             confusion_matrix = skl_metrics.confusion_matrix(gt_labels, np.argmax(predicted_labels, axis=1))
             rec_confusion_matrix = skl_metrics.confusion_matrix(gt_labels, np.argmax(predicted_labels, axis=1), normalize='true')
             prec_confusion_matrix = skl_metrics.confusion_matrix(gt_labels, np.argmax(predicted_labels, axis=1), normalize='pred')
 
             confusion_matrix_plot(
                 confusion_matrix,
-                self.settings["labels"],
+                self.settings['postprocessor']["labels"],
                 output_path=os.path.join(output_folder, 'confusion_matrix'),
                 fig_size=(15, 10),
                 mlops_task=task,
@@ -181,7 +181,7 @@ class DataframeImageCategoricalPostprocessor(BasePostProcessor):
 
             confusion_matrix_plot(
                 rec_confusion_matrix,
-                self.settings["labels"],
+                self.settings['postprocessor']["labels"],
                 output_path=os.path.join(output_folder, 'confusion_matrix_recall'),
                 normalize=True,
                 fig_size=(15, 10),
@@ -191,7 +191,7 @@ class DataframeImageCategoricalPostprocessor(BasePostProcessor):
 
             confusion_matrix_plot(
                 prec_confusion_matrix,
-                self.settings["labels"],
+                self.settings['postprocessor']["labels"],
                 output_path=os.path.join(output_folder, 'confusion_matrix_precision'),
                 normalize=True,
                 fig_size=(15, 10),
@@ -205,7 +205,7 @@ class DataframeImageCategoricalPostprocessor(BasePostProcessor):
             logger.info(f'precision confusion matrix:\n{prec_confusion_matrix * 100}')
 
         # Recall vs discarded images
-        if self.settings['recall_vs_discarded_images']:
+        if self.settings['postprocessor']['recall_vs_discarded_images']:
             avg_rec_y, conf_y, discarded_x = metric_vs_discarded_samples(
                 metric=skl_metrics.balanced_accuracy_score,  # metric that gets two input arguments: metric(gt_labels, predicted_labels)
                 predicted_labels=np.argmax(predicted_labels, axis=1),
@@ -223,7 +223,7 @@ class DataframeImageCategoricalPostprocessor(BasePostProcessor):
             )
 
         # Per class f1 vs discarded images
-        if self.settings['per_class_f1_vs_discarded_images']:
+        if self.settings['postprocessor']['per_class_f1_vs_discarded_images']:
             num_of_classes = len(predicted_labels[0])
             for cls in range(num_of_classes):
                 f1_, conf_, discarded_ = metric_vs_discarded_samples(
@@ -239,6 +239,6 @@ class DataframeImageCategoricalPostprocessor(BasePostProcessor):
                     conf_,
                     discarded_,
                     task,
-                    f'f1_vs_discarded_images_fold{fold}_{self.settings["labels"][cls]}',
+                    f'f1_vs_discarded_images_fold{fold}_{self.settings["postprocessor"]["labels"][cls]}',
                     'f1'
                 )

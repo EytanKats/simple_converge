@@ -56,7 +56,7 @@ class BasePostProcessor(abc.ABC):
         This method calculates metrics for batch of data
         :param output_folder: directory to save plots / images
         :param fold: number of fold
-        :param task: instance of ClearML task
+        :param task: instance of MLOps task
         :return None
         """
 

@@ -41,9 +41,9 @@ class DataframeImageRepresentationPostprocessor(BasePostProcessor):
             run_mode
     ):
 
-        if self.settings['activation'] == 'sigmoid':
+        if self.settings['postprocessor']['activation'] == 'sigmoid':
             predictions = special.expit(predictions)
-        elif self.settings['activation'] == 'softmax':
+        elif self.settings['postprocessor']['activation'] == 'softmax':
             predictions = special.softmax(predictions, axis=-1)
 
         self.features = predictions
@@ -79,7 +79,7 @@ class DataframeImageRepresentationPostprocessor(BasePostProcessor):
         logger.info('Calculate cosine distances between samples')
         norm_features = features / np.linalg.norm(features, axis=1).reshape((features.shape[0], 1)).repeat(features.shape[1], axis=1)
         distances = np.einsum('nc,mc->nm', norm_features, norm_features)
-        closest_indices = np.fliplr(np.argsort(distances, axis=1)[:, -(self.settings['num_of_closest_samples'] + 1):-1])
+        closest_indices = np.fliplr(np.argsort(distances, axis=1)[:, -(self.settings['postprocessor']['num_of_closest_samples'] + 1):-1])
 
         # Save close samples
         logger.info('Save close samples')
@@ -89,11 +89,11 @@ class DataframeImageRepresentationPostprocessor(BasePostProcessor):
             os.makedirs(output_image_folder)
 
             output_query_image_path = output_image_folder.joinpath(self._get_closest_image_name(query_idx, 0))
-            shutil.copy(self.dataset_df.iloc[query_idx][self.settings['image_path_column']], output_query_image_path)
+            shutil.copy(self.dataset_df.iloc[query_idx][self.settings['postprocessor']['image_path_column']], output_query_image_path)
 
             for similarity_idx, key_idx in enumerate(closest_indices[query_idx, :]):
                 output_key_image_path = output_image_folder.joinpath(self._get_closest_image_name(key_idx, similarity_idx + 1))
-                shutil.copy(self.dataset_df.iloc[key_idx][self.settings['image_path_column']], output_key_image_path)
+                shutil.copy(self.dataset_df.iloc[key_idx][self.settings['postprocessor']['image_path_column']], output_key_image_path)
 
         # Plot 2D TSNE for features
         logger.info('Plot 2D TSNE')
@@ -102,7 +102,7 @@ class DataframeImageRepresentationPostprocessor(BasePostProcessor):
         self.dataset_df['tsne_2d_one'] = tsne_results[:, 0]
         self.dataset_df['tsne_2d_two'] = tsne_results[:, 1]
 
-        for column in self.settings['tsne_columns']:
+        for column in self.settings['postprocessor']['tsne_columns']:
             plt.figure(figsize=(16, 10))
             sns.scatterplot(
                 x='tsne_2d_one',
