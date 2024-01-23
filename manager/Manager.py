@@ -145,11 +145,11 @@ def fit(
         mlops_task = MLOpsTask(settings=settings)
 
     # Create output folder
-    settings["output_folder"] = str(pathlib.Path(settings["output_folder"]).parent.joinpath(pathlib.Path(settings["output_folder"]).name + time.strftime("_%Y%m%d-%H%M%S")))
-    os.makedirs(settings["output_folder"])
+    settings['manager']["output_folder"] = str(pathlib.Path(settings['manager']["output_folder"]).parent.joinpath(pathlib.Path(settings['manager']["output_folder"]).name + time.strftime("_%Y%m%d-%H%M%S")))
+    os.makedirs(settings['manager']["output_folder"])
 
     # Save settings file into output folder
-    with open(os.path.join(settings["output_folder"], 'settings.json'), 'w') as fp:
+    with open(os.path.join(settings['manager']["output_folder"], 'settings.json'), 'w') as fp:
         json.dump(settings, fp, indent=4)
 
     # Create trainer
