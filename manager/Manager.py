@@ -97,7 +97,7 @@ def _predict_fold(
         )
 
         # Calculate metrics
-        if run_mode == RunMode.TEST:
+        if run_mode == RunMode.TEST or run_mode == RunMode.TRAINING:
             postprocessor.calculate_metrics(
                 output_folder=output_folder,
                 fold=fold,
