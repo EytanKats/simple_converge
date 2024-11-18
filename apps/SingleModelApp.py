@@ -94,10 +94,10 @@ class SingleModelApp(BaseApp):
         if self.scheduler is not None:
             self.scheduler.step()
 
-    def on_epoch_start(self):
+    def on_epoch_start(self, epoch):
         pass
 
-    def on_epoch_end(self, is_plateau=False):
+    def on_epoch_end(self, epoch, is_plateau=False):
 
         # Reduce learning rate on plateau
         if is_plateau and self.settings['app']['use_reduce_lr_on_plateau']:

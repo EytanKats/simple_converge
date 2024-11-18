@@ -65,11 +65,11 @@ class BaseApp(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def on_epoch_start(self):
+    def on_epoch_start(self, epoch):
         pass
 
     @abc.abstractmethod
-    def on_epoch_end(self, is_plateau=False):
+    def on_epoch_end(self, epoch, is_plateau=False):
         pass
 
     @abc.abstractmethod

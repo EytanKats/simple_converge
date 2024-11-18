@@ -131,7 +131,7 @@ class Trainer(object):
             logger.info(f'\nEpoch {epoch}')
 
             # Do application specific actions on epoch start
-            app.on_epoch_start()
+            app.on_epoch_start(epoch)
 
             # Log learning rate/s
             current_lr = app.get_lr()
@@ -239,7 +239,7 @@ class Trainer(object):
 
             # Do application specific actions on epoch end
             is_plateau = self._is_plateau()
-            app.on_epoch_end(is_plateau)
+            app.on_epoch_end(epoch, is_plateau)
 
             # Update monitor best value for next epoch
             self.update_monitor_best_value()
